@@ -8,7 +8,7 @@ import deepdish as dd
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from scipy.misc import imread, imresize
+#from scipy.misc import imread, imresize
 import matplotlib.pyplot as plt
 
 class VotTrainDataset(data.Dataset):
