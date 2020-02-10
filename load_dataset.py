@@ -95,36 +95,36 @@ class VotTrainDataset(data.Dataset):
         return self.n_data
 
 
-def main():
-    img_size = 224
-    file = 'vot2017_train.txt'
-    img_folder = './vot2015'
-    train_dataset = VotTrainDataset(img_folder=img_folder, file=file, img_size=224, S=7, B=2, C=20, transforms=[transforms.ToTensor()])
-    #img, target = train_dataset.__getitem__(0)
+# def main():
+#     img_size = 224
+#     file = 'vot2017_train.txt'
+#     img_folder = './vot2015'
+#     train_dataset = VotTrainDataset(img_folder=img_folder, file=file, img_size=224, S=7, B=2, C=20, transforms=[transforms.ToTensor()])
+#     #img, target = train_dataset.__getitem__(0)
 
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=0)
-    train_iter = iter(train_loader)
-    img, target = next(train_iter)
-    for i in range(7):
-        for j in range(7):
-            if target[0,i,j,4] != 0:
-                print(i,j)
-                print(target[0,i,j])
+#     train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=0)
+#     train_iter = iter(train_loader)
+#     img, target = next(train_iter)
+#     for i in range(7):
+#         for j in range(7):
+#             if target[0,i,j,4] != 0:
+#                 print(i,j)
+#                 print(target[0,i,j])
 
-    # print(img.size())
-    # print(type(img))
-    # print(type(target))
-    img, target = next(train_iter)
+#     # print(img.size())
+#     # print(type(img))
+#     # print(type(target))
+#     img, target = next(train_iter)
 
-    print(img.size())
-    print(target.size())
-    img, target = next(train_iter)
-    print(img.size())
-    print(target.size())
+#     print(img.size())
+#     print(target.size())
+#     img, target = next(train_iter)
+#     print(img.size())
+#     print(target.size())
 
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 

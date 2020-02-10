@@ -11,7 +11,7 @@ class Flatten(nn.Module):
 class YOLO_V1(nn.Module):
     def __init__(self):
         super(YOLO_V1, self).__init__()
-        C = 20  # number of classes
+        C = 24  # number of classes
         print("\n------Initiating YOLO v1------\n")
         self.conv_layer1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=7//2),
