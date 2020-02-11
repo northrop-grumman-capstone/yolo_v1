@@ -36,7 +36,7 @@ start_time = time.time()
 # In[2]:
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 use_gpu = torch.cuda.is_available()
 
 
@@ -112,6 +112,7 @@ print('')
 
 if use_gpu:
     model.cuda()
+    print("Using GPUs")
 
 
 # ### input pipeline
@@ -120,7 +121,7 @@ if use_gpu:
 
 
 train_dataset = VotTrainDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=1)
+train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=0)
 
 
 
