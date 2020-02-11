@@ -25,23 +25,26 @@ class VotTrainDataset(data.Dataset):
         self.labels = []
 
 
-        bbox = []
-        label = []
         for file in os.listdir(annotDir):
             filename = annotDir+file
             infile = open(filename,'rb')
             videoAnnot = pickle.load(infile)
             infile.close()
             for i,value in enumerate(videoAnnot):
-                self.file_names.append(file[:-7]+"/"+str(i)+".npy")
-                if len(value) != 0:
-                    label.append(int(value[0][0]))
-                    bbox.append([float(i) for i in value[0][1]])
-                else:
-                    label.append(-1)
-                    bbox.append([float(-1) for i in range(4)])
-                self.bboxes.append(torch.Tensor(bbox))
-                self.labels.append(torch.IntTensor(label))
+                bbox = []
+                label = []
+                for j in range(len(value)):
+                    if(j!=0): break # original code only used one annotation, remove later if it works with more
+                    self.file_names.append(file[:-7]+"/"+str(i)+".npy")
+                    #self.file_names.append(file[:-7]+"/"+str(i)+".jpeg")
+                    label.append(int(value[j][0]))
+                    # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
+                    # this expected [xcenter, ycenter, height, width] in img coords right here
+                    # but I changed later code, so it expects it between 0 and 1
+                    bbox.append([(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]])
+                if(len(value)!=0):
+                    self.bboxes.append(torch.Tensor(bbox))
+                    self.labels.append(torch.IntTensor(label))
         self.n_data = len(self.labels)
 
 
@@ -50,11 +53,13 @@ class VotTrainDataset(data.Dataset):
         label = self.labels[index].clone()
 
         img = Image.fromarray(np.load(os.path.join(self.videoDir, self.file_names[index])))
+        #img = Image.open(os.path.join(self.videoDir, self.file_names[index]))
 
         width, height = img.size
 
         img = img.resize((self.img_size, self.img_size)) 
-        bbox = bbox / torch.Tensor([width, height, width, height])# * self.img_size
+        # the following line resized bboxes to between 0 and 1, but ours are already like that
+        #bbox = bbox / torch.Tensor([width, height, width, height])# * self.img_size
         target = self.encode_target(bbox, label)
         transform = transforms.Compose(self.transforms)
         img = transform(img)
