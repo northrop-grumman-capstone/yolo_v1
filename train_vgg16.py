@@ -45,8 +45,8 @@ use_gpu = torch.cuda.is_available()
 # In[3]:
 
 
-annotDir = "sample_data/test/annots/"
-videoDir = "sample_data/test/videos/"
+annotDir = "sample_data/train/annots/"
+videoDir = "sample_data/train/videos/"
 
 
 # ### set hyperparameters

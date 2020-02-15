@@ -52,7 +52,7 @@ class YOLO_V1(nn.Module):
             nn.Conv2d(in_channels=1024, out_channels=512, kernel_size=1, stride=1, padding=1//2),
             nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
             nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
-            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=2, padding=3//2),
+            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(0.1),
         )
@@ -71,13 +71,23 @@ class YOLO_V1(nn.Module):
         self.conn_layer2 = nn.Sequential(nn.Linear(in_features=4096, out_features=7 * 7 * (2 * 5 + C)))
 
     def forward(self, input):
+        #print(input.size())
         conv_layer1 = self.conv_layer1(input)
+        #print(conv_layer1.size())
         conv_layer2 = self.conv_layer2(conv_layer1)
+        #print(conv_layer2.size())
         conv_layer3 = self.conv_layer3(conv_layer2)
+        #print(conv_layer3.size())
         conv_layer4 = self.conv_layer4(conv_layer3)
+        #print(conv_layer4.size())
         conv_layer5 = self.conv_layer5(conv_layer4)
+        #print(conv_layer5.size())
         conv_layer6 = self.conv_layer6(conv_layer5)
+        #conv_layer6 = self.conv_layer6(conv_layer4)
+        #print(conv_layer6.size())
         flatten = self.flatten(conv_layer6)
+        #flatten = self.flatten(conv_layer4)
+        #print(flatten.size())
         conn_layer1 = self.conn_layer1(flatten)
         output = self.conn_layer2(conn_layer1)
         return output

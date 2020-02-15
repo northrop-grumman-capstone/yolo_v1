@@ -35,8 +35,8 @@ class VotTrainDataset(data.Dataset):
                 label = []
                 for j in range(len(value)):
                     if(j!=0): break # original code only used one annotation, remove later if it works with more
-                    self.file_names.append(file[:-7]+"/"+str(i)+".npy")
-                    #self.file_names.append(file[:-7]+"/"+str(i)+".jpeg")
+                    #self.file_names.append(file[:-7]+"/"+str(i)+".npy")
+                    self.file_names.append(file[:-7]+"/"+str(i)+".jpeg")
                     label.append(int(value[j][0]))
                     # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
                     # this expected [xcenter, ycenter, height, width] in img coords right here
@@ -52,8 +52,8 @@ class VotTrainDataset(data.Dataset):
         bbox = self.bboxes[index].clone()
         label = self.labels[index].clone()
 
-        img = Image.fromarray(np.load(os.path.join(self.videoDir, self.file_names[index])))
-        #img = Image.open(os.path.join(self.videoDir, self.file_names[index]))
+        #img = Image.fromarray(np.load(os.path.join(self.videoDir, self.file_names[index])))
+        img = Image.open(os.path.join(self.videoDir, self.file_names[index]))
 
         width, height = img.size
 
@@ -84,10 +84,13 @@ class VotTrainDataset(data.Dataset):
         h = bbox[:,3]
         h_sqrt = torch.sqrt(h)
         y_center = bbox[:,1]
-        x_index = (x_center / (1 / float(self.S))).ceil()-1
-        y_index = (y_center / (1 / float(self.S))).ceil()-1
+
+        x_index = torch.clamp((x_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
+        y_index = torch.clamp((y_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
         c = torch.ones_like(x_center)
         # set w_sqrt and h_sqrt directly
+
+
         box_block = torch.cat((x_center.view(-1,1), y_center.view(-1,1), w_sqrt.view(-1,1), h_sqrt.view(-1,1), c.view(-1,1)), dim=1)
         box_info = box_block.repeat(1, self.B)
         target_infoblock = torch.cat((box_info, class_info), dim=1)
