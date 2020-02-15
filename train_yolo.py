@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[21]:
-
-
 import os
 import sys
 import time
@@ -28,7 +22,6 @@ start_time = time.time()
 
 
 # ### gpu usage
-#os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 use_gpu = torch.cuda.is_available()
 
 
@@ -51,37 +44,12 @@ C = 24 # This is currently hardcoded into the YOLO model
 n_features = 1000
 
 
-## ### load pre-trained vgg 16 model
-#model = models.vgg16(pretrained=True)  
-#
-#model.classifier = nn.Sequential(
-#        nn.Linear(512 * 7 * 7, n_features),
-#        nn.LeakyReLU(0.1, inplace=True),
-#        nn.Dropout(),
-#        nn.Linear(n_features, (B*5+C) * S * S),
-#        nn.Sigmoid(),
-#    )
-#
-## initialize the weights and biases for the linear block of the model
-#for m in model.modules():
-#    if isinstance(m, nn.Linear):
-#        m.weight.data.normal_(0, 0.01)
-#        m.bias.data.zero_()
-#
-#print(model)
-#print('pre-trained vgg16 model has loaded!')
-#print('')
-
 # load yolo model
 model = YOLO_V1()
 print(model)
 print("untrained YOLO_V1 model has loaded!")
 print("")
 
-# utilize gpu to speed up if it is avaliable
-#if use_gpu:
-#    model.cuda()
-#    print("Using GPUs")
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
