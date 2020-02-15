@@ -8,10 +8,9 @@ import deepdish as dd
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-#from scipy.misc import imread, imresize
 import matplotlib.pyplot as plt
 
-class VotTrainDataset(data.Dataset):
+class TrainDataset(data.Dataset):
     def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms):
         self.videoDir = videoDir
         self.annotDir = annotDir
@@ -35,7 +34,6 @@ class VotTrainDataset(data.Dataset):
                 label = []
                 for j in range(len(value)):
                     if(j!=0): break # original code only used one annotation, remove later if it works with more
-                    #self.file_names.append(file[:-7]+"/"+str(i)+".npy")
                     self.file_names.append(file[:-7]+"/"+str(i)+".jpeg")
                     label.append(int(value[j][0]))
                     # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
@@ -52,7 +50,6 @@ class VotTrainDataset(data.Dataset):
         bbox = self.bboxes[index].clone()
         label = self.labels[index].clone()
 
-        #img = Image.fromarray(np.load(os.path.join(self.videoDir, self.file_names[index])))
         img = Image.open(os.path.join(self.videoDir, self.file_names[index]))
 
         width, height = img.size
@@ -101,38 +98,4 @@ class VotTrainDataset(data.Dataset):
 
     def __len__(self):
         return self.n_data
-
-
-# def main():
-#     img_size = 224
-#     file = 'vot2017_train.txt'
-#     img_folder = './vot2015'
-#     train_dataset = VotTrainDataset(img_folder=img_folder, file=file, img_size=224, S=7, B=2, C=20, transforms=[transforms.ToTensor()])
-#     #img, target = train_dataset.__getitem__(0)
-
-#     train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=0)
-#     train_iter = iter(train_loader)
-#     img, target = next(train_iter)
-#     for i in range(7):
-#         for j in range(7):
-#             if target[0,i,j,4] != 0:
-#                 print(i,j)
-#                 print(target[0,i,j])
-
-#     # print(img.size())
-#     # print(type(img))
-#     # print(type(target))
-#     img, target = next(train_iter)
-
-#     print(img.size())
-#     print(target.size())
-#     img, target = next(train_iter)
-#     print(img.size())
-#     print(target.size())
-
-
-
-# if __name__ == '__main__':
-#     main()
-
 

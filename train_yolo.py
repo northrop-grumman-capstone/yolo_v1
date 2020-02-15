@@ -30,6 +30,13 @@ annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/dat
 videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
 
 
+# ### sample dataset
+# annotDir = "sample_data/train/annots/"
+# videoDir = "sample_data/train/videos/"
+
+
+
+
 # ### set hyperparameters
 learning_rate = 0.0006
 img_size = 224
@@ -55,17 +62,17 @@ print("")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 if torch.cuda.device_count() > 1:
-    print("Let's use", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model).cuda()
-else:
-    model.to(device)
+    print("Using", torch.cuda.device_count(), "GPUs!")
+    model = nn.DataParallel(model)
+
+
+model.to(device)
 
 
 
 # ### input pipeline
-train_dataset = VotTrainDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
+train_dataset = TrainDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
 train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=0)
-
 
 
 # ### set model into train mode
