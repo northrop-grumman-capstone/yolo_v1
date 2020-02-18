@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
-class TrainDataset(data.Dataset):
+class FramesDataset(data.Dataset):
     def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms):
         self.videoDir = videoDir
         self.annotDir = annotDir

@@ -9,7 +9,7 @@ import torchvision.transforms as transforms
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from load_frames import *
+from load_videos import *
 from YoloLoss import YoloLoss
 from network import *
 
@@ -27,13 +27,13 @@ use_gpu = torch.cuda.is_available()
 
 
 # ### dataset and file folder
-annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
-videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
+# annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
+# videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
 
 
 # ### sample dataset
-# annotDir = "sample_data/train/annots/"
-# videoDir = "sample_data/train/videos/"
+annotDir = "sample_data/train/annots/"
+videoDir = "sample_data/train/videos/"
 
 
 
@@ -45,7 +45,7 @@ num_epochs = 150
 lambda_coord = 5
 lambda_noobj = .5
 #n_batch = 64
-n_batch = 32
+n_batch = 1
 S = 7 # This is currently hardcoded into the YOLO model
 B = 2 # This is currently hardcoded into the YOLO model
 C = 24 # This is currently hardcoded into the YOLO model
@@ -72,7 +72,7 @@ model.to(device)
 
 
 # ### input pipeline
-train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
+train_dataset = VideoDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
 train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=0, shuffle=True)
 
 
@@ -92,15 +92,17 @@ loss_list = []
 loss_record = []
 for epoch in range(num_epochs):
     for i,(images,target) in enumerate(train_loader):
+
+        images = torch.squeeze(images)
+        target = torch.squeeze(target)
+
         images = Variable(images)
         target = Variable(target)
         if use_gpu:
-           # images,target = images.cuda(),target.cuda()
             images,target = images.to(device),target.to(device)
 
         pred = model(images)
         loss = loss_fn(pred,target)
-        #current_loss = loss.data.cpu().numpy()[0]
         current_loss = loss.data.cpu().numpy()
         loss_list.append(current_loss)
 
