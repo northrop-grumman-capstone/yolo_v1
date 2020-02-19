@@ -16,12 +16,12 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from load_dataset import *
 from YoloLoss import YoloLoss
-from network import *
+from mini import *
 
 
 
-loss_name = 'loss_yolo.h5'
-model_name = 'model_yolo.pth'
+loss_name = 'loss_mini.h5'
+model_name = 'model_mini.pth'
 
  ### time start
 start_time = time.time()
@@ -75,7 +75,7 @@ n_features = 1000
 # load yolo model
 model = YOLO_V1()
 print(model)
-print("untrained YOLO_V1 model has loaded!")
+print("untrained YOLO_V1 model has loaded! (mini version)")
 print("")
 
 # utilize gpu to speed up if it is avaliable
@@ -84,7 +84,7 @@ print("")
 #    print("Using GPUs")
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 #if torch.cuda.device_count() > 1:
 #    print("Let's use", torch.cuda.device_count(), "GPUs!")
@@ -155,7 +155,7 @@ model.eval()
 torch.save(model.state_dict(),os.path.join(save_folder, model_name))
 
 loss_record = np.array(loss_record)
-dd.io.save(os.path.join(save_folder, 'yolo_loss_150epoches_0411.h5'), loss_record)
+dd.io.save(os.path.join(save_folder, 'mini_loss_150epoches_0411.h5'), loss_record)
 
 print('model has saved successfully!')
 
