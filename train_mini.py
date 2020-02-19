@@ -14,7 +14,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from load_dataset import *
+from load_frames import *
 from YoloLoss import YoloLoss
 from mini import *
 
@@ -28,7 +28,6 @@ start_time = time.time()
 
 
 # ### gpu usage
-#os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 use_gpu = torch.cuda.is_available()
 
 
@@ -51,37 +50,11 @@ C = 24 # This is currently hardcoded into the YOLO model
 n_features = 1000
 
 
-## ### load pre-trained vgg 16 model
-#model = models.vgg16(pretrained=True)  
-#
-#model.classifier = nn.Sequential(
-#        nn.Linear(512 * 7 * 7, n_features),
-#        nn.LeakyReLU(0.1, inplace=True),
-#        nn.Dropout(),
-#        nn.Linear(n_features, (B*5+C) * S * S),
-#        nn.Sigmoid(),
-#    )
-#
-## initialize the weights and biases for the linear block of the model
-#for m in model.modules():
-#    if isinstance(m, nn.Linear):
-#        m.weight.data.normal_(0, 0.01)
-#        m.bias.data.zero_()
-#
-#print(model)
-#print('pre-trained vgg16 model has loaded!')
-#print('')
-
 # load yolo model
 model = YOLO_V1()
 print(model)
 print("untrained YOLO_V1 model has loaded! (mini version)")
 print("")
-
-# utilize gpu to speed up if it is avaliable
-#if use_gpu:
-#    model.cuda()
-#    print("Using GPUs")
 
 
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -89,15 +62,12 @@ device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 #if torch.cuda.device_count() > 1:
 #    print("Let's use", torch.cuda.device_count(), "GPUs!")
 #    model = nn.DataParallel(model).cuda()
-#else:
-#    model.to(device)
 model.to(device)
 
 
 # ### input pipeline
-train_dataset = VotTrainDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=0)
-
+train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
+train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=4)
 
 
 # ### set model into train mode
@@ -105,7 +75,7 @@ model.train()
 
 
 # ### set loss function and optimizer
-loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu)
+loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu, device=device)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 save_folder = 'results/'
@@ -133,7 +103,7 @@ for epoch in range(num_epochs):
 
 
         if i % 10 == 0:
-            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f"                              % (i, len(train_loader), epoch+1, num_epochs, current_loss))
+            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
         loss_record.append(current_loss)
         torch.save(model.state_dict(),os.path.join(save_folder, model_name))
@@ -162,4 +132,3 @@ print('model has saved successfully!')
 
 # ### time end
 print("\n--- it costs %.4s minutes ---" % ((time.time() - start_time)/60))
-

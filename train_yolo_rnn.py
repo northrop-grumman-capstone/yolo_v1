@@ -62,19 +62,15 @@ print("")
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-if torch.cuda.device_count() > 1:
-    print("Using", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model)
-
-
+#if torch.cuda.device_count() > 1:
+#    print("Using", torch.cuda.device_count(), "GPUs!")
+#    model = nn.DataParallel(model)
 model.to(device)
-
 
 
 # ### input pipeline
 train_dataset = VideoDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=0, shuffle=True)
-
+train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=4, shuffle=True)
 
 
 # ### set model into train mode
@@ -82,7 +78,7 @@ model.train()
 
 
 # ### set loss function and optimizer
-loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu)
+loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu, device=device)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 save_folder = 'results/'
@@ -112,7 +108,7 @@ for epoch in range(num_epochs):
 
 
         if i % 10 == 0:
-            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f"                              % (i, len(train_loader), epoch+1, num_epochs, current_loss))
+            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
         loss_record.append(current_loss)
         torch.save(model.state_dict(),os.path.join(save_folder, model_name))
@@ -141,4 +137,3 @@ print('model has saved successfully!')
 
 # ### time end
 print("\n--- it costs %.4s minutes ---" % ((time.time() - start_time)/60))
-

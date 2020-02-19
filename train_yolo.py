@@ -70,7 +70,7 @@ model.to(device)
 
 # ### input pipeline
 train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=0, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=4, shuffle=True)
 
 
 
@@ -79,7 +79,7 @@ model.train()
 
 
 # ### set loss function and optimizer
-loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu)
+loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu, device=device)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 save_folder = 'results/'
@@ -136,4 +136,3 @@ print('model has saved successfully!')
 
 # ### time end
 print("\n--- it costs %.4s minutes ---" % ((time.time() - start_time)/60))
-

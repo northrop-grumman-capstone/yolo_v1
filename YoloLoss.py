@@ -6,7 +6,7 @@ import torchvision.models as models
 
 
 class YoloLoss(nn.Module):
-    def __init__(self, n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=False):
+    def __init__(self, n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=False, device=None):
         """
 
         :param n_batch: number of batches
@@ -22,6 +22,7 @@ class YoloLoss(nn.Module):
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
         self.use_gpu = use_gpu
+        self.device = torch.device("cuda:0") if use_gpu and device==None else device
 
     def compute_iou(self, bbox1, bbox2):
         """
@@ -91,7 +92,7 @@ class YoloLoss(nn.Module):
 
         # compute loss which do not contain objects
         if self.use_gpu:
-            noobj_target_mask = torch.cuda.ByteTensor(noobj_target.size())
+            noobj_target_mask = torch.cuda.ByteTensor(noobj_target.size(), device=self.device)
         else:
             noobj_target_mask = torch.ByteTensor(noobj_target.size())
         noobj_target_mask.zero_()
@@ -103,8 +104,8 @@ class YoloLoss(nn.Module):
 
         # compute loss which contain objects
         if self.use_gpu:
-            coord_response_mask = torch.cuda.ByteTensor(box_target.size())
-            coord_not_response_mask = torch.cuda.ByteTensor(box_target.size())
+            coord_response_mask = torch.cuda.ByteTensor(box_target.size(), device=self.device)
+            coord_not_response_mask = torch.cuda.ByteTensor(box_target.size(), device=self.device)
         else:
             coord_response_mask = torch.ByteTensor(box_target.size())
             coord_not_response_mask = torch.ByteTensor(box_target.size())
@@ -116,7 +117,7 @@ class YoloLoss(nn.Module):
             iou = self.compute_iou(box1[:, :4], box2[:, :4])
             max_iou, max_index = iou.max(0)
             if self.use_gpu:
-                max_index = max_index.data.cuda()
+                max_index = max_index.data.to(self.device)
             else:
                 max_index = max_index.data
             coord_response_mask[i+max_index]=1
@@ -138,4 +139,3 @@ class YoloLoss(nn.Module):
         # compute total loss
         total_loss = self.lambda_coord * loc_loss + contain_loss + self.lambda_noobj * noobj_loss + class_loss
         return total_loss
-
