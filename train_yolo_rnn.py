@@ -27,13 +27,13 @@ use_gpu = torch.cuda.is_available()
 
 
 # ### dataset and file folder
-# annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
-# videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
+annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
+videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
 
 
 # ### sample dataset
-annotDir = "sample_data/train/annots/"
-videoDir = "sample_data/train/videos/"
+# annotDir = "sample_data/train/annots/"
+# videoDir = "sample_data/train/videos/"
 
 
 
@@ -73,7 +73,7 @@ model.to(device)
 
 # ### input pipeline
 train_dataset = VideoDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=1, num_workers=0, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=1, num_workers=4, shuffle=True)
 
 
 

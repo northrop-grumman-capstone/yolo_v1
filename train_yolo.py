@@ -70,7 +70,7 @@ model.to(device)
 
 # ### input pipeline
 train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=0, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=4, shuffle=True)
 
 
 
@@ -92,12 +92,11 @@ for epoch in range(num_epochs):
         images = Variable(images)
         target = Variable(target)
         if use_gpu:
-           # images,target = images.cuda(),target.cuda()
             images,target = images.to(device),target.to(device)
 
         pred = model(images)
         loss = loss_fn(pred,target)
-        #current_loss = loss.data.cpu().numpy()[0]
+
         current_loss = loss.data.cpu().numpy()
         loss_list.append(current_loss)
 
