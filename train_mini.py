@@ -1,3 +1,9 @@
+
+# coding: utf-8
+
+# In[21]:
+
+
 import os
 import sys
 import time
@@ -6,36 +12,29 @@ import numpy as np
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
-from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from load_frames import *
+from load_dataset import *
 from YoloLoss import YoloLoss
-from network import *
+from mini import *
 
 
 
-loss_name = 'loss_yolo.h5'
-model_name = 'model_yolo.pth'
+loss_name = 'loss_mini.h5'
+model_name = 'model_mini.pth'
 
  ### time start
 start_time = time.time()
 
 
 # ### gpu usage
+#os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 use_gpu = torch.cuda.is_available()
 
 
 # ### dataset and file folder
 annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
 videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
-
-
-# ### sample dataset
-# annotDir = "sample_data/train/annots/"
-# videoDir = "sample_data/train/videos/"
-
-
 
 
 # ### set hyperparameters
@@ -52,25 +51,52 @@ C = 24 # This is currently hardcoded into the YOLO model
 n_features = 1000
 
 
+## ### load pre-trained vgg 16 model
+#model = models.vgg16(pretrained=True)  
+#
+#model.classifier = nn.Sequential(
+#        nn.Linear(512 * 7 * 7, n_features),
+#        nn.LeakyReLU(0.1, inplace=True),
+#        nn.Dropout(),
+#        nn.Linear(n_features, (B*5+C) * S * S),
+#        nn.Sigmoid(),
+#    )
+#
+## initialize the weights and biases for the linear block of the model
+#for m in model.modules():
+#    if isinstance(m, nn.Linear):
+#        m.weight.data.normal_(0, 0.01)
+#        m.bias.data.zero_()
+#
+#print(model)
+#print('pre-trained vgg16 model has loaded!')
+#print('')
+
 # load yolo model
 model = YOLO_V1()
 print(model)
-print("untrained YOLO_V1 model has loaded!")
+print("untrained YOLO_V1 model has loaded! (mini version)")
 print("")
 
+# utilize gpu to speed up if it is avaliable
+#if use_gpu:
+#    model.cuda()
+#    print("Using GPUs")
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 #if torch.cuda.device_count() > 1:
-#    print("Using", torch.cuda.device_count(), "GPUs!")
-#    model = nn.DataParallel(model)
+#    print("Let's use", torch.cuda.device_count(), "GPUs!")
+#    model = nn.DataParallel(model).cuda()
+#else:
+#    model.to(device)
 model.to(device)
 
 
 # ### input pipeline
-train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=0, shuffle=True)
+train_dataset = VotTrainDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
+train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=0)
 
 
 
@@ -107,7 +133,7 @@ for epoch in range(num_epochs):
 
 
         if i % 10 == 0:
-            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
+            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f"                              % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
         loss_record.append(current_loss)
         torch.save(model.state_dict(),os.path.join(save_folder, model_name))
@@ -129,7 +155,7 @@ model.eval()
 torch.save(model.state_dict(),os.path.join(save_folder, model_name))
 
 loss_record = np.array(loss_record)
-dd.io.save(os.path.join(save_folder, 'yolo_loss_150epoches_0411.h5'), loss_record)
+dd.io.save(os.path.join(save_folder, 'mini_loss_150epoches_0411.h5'), loss_record)
 
 print('model has saved successfully!')
 
