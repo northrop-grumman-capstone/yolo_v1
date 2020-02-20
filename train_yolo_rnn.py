@@ -15,8 +15,8 @@ from network import *
 
 
 
-loss_name = 'loss_yolo.h5'
-model_name = 'model_yolo.pth'
+loss_name = 'loss_yolo_rnn.h5'
+model_name = 'model_yolo_rnn.pth'
 
  ### time start
 start_time = time.time()
@@ -27,13 +27,13 @@ use_gpu = torch.cuda.is_available()
 
 
 # ### dataset and file folder
-# annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
-# videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
+annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
+videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
 
 
 # ### sample dataset
-annotDir = "sample_data/train/annots/"
-videoDir = "sample_data/train/videos/"
+# annotDir = "sample_data/train/annots/"
+# videoDir = "sample_data/train/videos/"
 
 
 
@@ -45,7 +45,7 @@ num_epochs = 150
 lambda_coord = 5
 lambda_noobj = .5
 #n_batch = 64
-n_batch = 1
+n_batch = 32
 S = 7 # This is currently hardcoded into the YOLO model
 B = 2 # This is currently hardcoded into the YOLO model
 C = 24 # This is currently hardcoded into the YOLO model
@@ -70,15 +70,14 @@ model.to(device)
 
 # ### input pipeline
 train_dataset = VideoDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=4, shuffle=True)
-
+train_loader = DataLoader(train_dataset, batch_size=1, num_workers=4, shuffle=True)
 
 # ### set model into train mode
 model.train()
 
 
 # ### set loss function and optimizer
-loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu, device=device)
+loss_fn = YoloLoss(1, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu, device=device)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 save_folder = 'results/'
@@ -87,31 +86,40 @@ save_folder = 'results/'
 loss_list = []
 loss_record = []
 for epoch in range(num_epochs):
-    for i,(images,target) in enumerate(train_loader):
-
-        images = torch.squeeze(images)
+    for i,(video,target) in enumerate(train_loader):
+        video = torch.squeeze(video)
         target = torch.squeeze(target)
 
-        images = Variable(images)
-        target = Variable(target)
-        if use_gpu:
-            images,target = images.to(device),target.to(device)
+        videoSize = len(video)
+        for j in range(0, videoSize,n_batch):
+            if(j + n_batch < videoSize):
+                videoSubset = video[j:j+n_batch]
+                targetSubset = target[j:j+n_batch]
+            else:
+                videoSubset = video[j:videoSize]
+                targetSubset = target[j:videoSize]
 
-        pred = model(images)
-        loss = loss_fn(pred,target)
-        current_loss = loss.data.cpu().numpy()
-        loss_list.append(current_loss)
+            videoSubset = Variable(videoSubset)
+            targetSubset = Variable(targetSubset)
+            if use_gpu:
+                videoSubset,targetSubset = videoSubset.to(device),targetSubset.to(device)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            pred = model(videoSubset)
+            loss = loss_fn(pred,targetSubset)
+            current_loss = loss.data.cpu().numpy()
+            loss_list.append(current_loss)
 
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        if i % 10 == 0:
+            loss_record.append(current_loss)
+            torch.save(model.state_dict(),os.path.join(save_folder, model_name))
+
+        if i % 2 == 0:
             sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
-        loss_record.append(current_loss)
-        torch.save(model.state_dict(),os.path.join(save_folder, model_name))
+
 
 
 # ### save the model parameters

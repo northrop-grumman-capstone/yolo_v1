@@ -8,7 +8,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from load_dataset import *
+from load_frames import *
 from YoloLoss import YoloLoss
 from network import *
 
@@ -95,8 +95,8 @@ model.to(device)
 
 
 # ### input pipeline
-train_dataset = TrainDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=0)
+train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
+train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=4)
 
 
 

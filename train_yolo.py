@@ -92,12 +92,11 @@ for epoch in range(num_epochs):
         images = Variable(images)
         target = Variable(target)
         if use_gpu:
-           # images,target = images.cuda(),target.cuda()
             images,target = images.to(device),target.to(device)
 
         pred = model(images)
         loss = loss_fn(pred,target)
-        #current_loss = loss.data.cpu().numpy()[0]
+
         current_loss = loss.data.cpu().numpy()
         loss_list.append(current_loss)
 
