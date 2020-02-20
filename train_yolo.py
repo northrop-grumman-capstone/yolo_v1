@@ -86,7 +86,6 @@ save_folder = 'results/'
 
 # ### training
 loss_list = []
-loss_record = []
 for epoch in range(num_epochs):
     for i,(images,target) in enumerate(train_loader):
         images = Variable(images)
@@ -105,11 +104,10 @@ for epoch in range(num_epochs):
         optimizer.step()
 
 
-        if i % 10 == 0:
+        if i % 20 == 0:
             sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
-        loss_record.append(current_loss)
-        torch.save(model.state_dict(),os.path.join(save_folder, model_name))
+            torch.save(model.state_dict(),os.path.join(save_folder, model_name))
 
 
 # ### save the model parameters
@@ -126,9 +124,6 @@ print('loss has saved successfully!')
 model.eval()
 
 torch.save(model.state_dict(),os.path.join(save_folder, model_name))
-
-loss_record = np.array(loss_record)
-dd.io.save(os.path.join(save_folder, 'yolo_loss_150epoches_0411.h5'), loss_record)
 
 print('model has saved successfully!')
 
