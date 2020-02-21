@@ -15,8 +15,8 @@ from network import *
 
 
 
-loss_name = 'loss_yolo.h5'
-model_name = 'model_yolo.pth'
+loss_name = 'loss_yolo_rnn.h5'
+model_name = 'model_yolo_rnn.pth'
 
  ### time start
 start_time = time.time()
@@ -62,20 +62,15 @@ print("")
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-if torch.cuda.device_count() > 1:
-    print("Using", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model)
-
-
+#if torch.cuda.device_count() > 1:
+#    print("Using", torch.cuda.device_count(), "GPUs!")
+#    model = nn.DataParallel(model)
 model.to(device)
-
 
 
 # ### input pipeline
 train_dataset = VideoDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
 train_loader = DataLoader(train_dataset, batch_size=int(n_batch/8), num_workers=0, shuffle=True)
-
-
 
 # ### set model into train mode
 model.train()
@@ -143,4 +138,3 @@ print('model has saved successfully!')
 
 # ### time end
 print("\n--- it costs %.4s minutes ---" % ((time.time() - start_time)/60))
-

@@ -49,22 +49,17 @@ C = 24 # This is currently hardcoded into the YOLO model
 n_features = 1000
 
 
-
 # load mini yolo model
 model = YOLO_V1()
 print(model)
 print("untrained YOLO_V1 model has loaded! (mini version)")
 print("")
 
-
-
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 #if torch.cuda.device_count() > 1:
 #    print("Let's use", torch.cuda.device_count(), "GPUs!")
 #    model = nn.DataParallel(model).cuda()
-#else:
-#    model.to(device)
 model.to(device)
 
 
@@ -72,21 +67,18 @@ model.to(device)
 train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
 train_loader = DataLoader(train_dataset, batch_size=n_batch, shuffle=True, num_workers=4)
 
-
-
 # ### set model into train mode
 model.train()
 
 
 # ### set loss function and optimizer
-loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu)
+loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu, device=device)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 save_folder = 'results/'
 
 # ### training
 loss_list = []
-loss_record = []
 for epoch in range(num_epochs):
     for i,(images,target) in enumerate(train_loader):
         images = Variable(images)
@@ -105,11 +97,10 @@ for epoch in range(num_epochs):
         optimizer.step()
 
 
-        if i % 10 == 0:
-            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f"                              % (i, len(train_loader), epoch+1, num_epochs, current_loss))
+        if i % 20 == 0:
+            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
-        loss_record.append(current_loss)
-        torch.save(model.state_dict(),os.path.join(save_folder, model_name))
+            torch.save(model.state_dict(),os.path.join(save_folder, model_name))
 
 
 # ### save the model parameters
@@ -127,12 +118,8 @@ model.eval()
 
 torch.save(model.state_dict(),os.path.join(save_folder, model_name))
 
-loss_record = np.array(loss_record)
-dd.io.save(os.path.join(save_folder, 'mini_loss_150epoches_0411.h5'), loss_record)
-
 print('model has saved successfully!')
 
 
 # ### time end
 print("\n--- it costs %.4s minutes ---" % ((time.time() - start_time)/60))
-
