@@ -27,13 +27,13 @@ use_gpu = torch.cuda.is_available()
 
 
 # ### dataset and file folder
-annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
-videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
+# annotDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/annots/"
+# videoDir = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/train/videos/"
 
 
 # ### sample dataset
-# annotDir = "sample_data/train/annots/"
-# videoDir = "sample_data/train/videos/"
+annotDir = "sample_data/train/annots/"
+videoDir = "sample_data/train/videos/"
 
 
 
@@ -91,6 +91,8 @@ for epoch in range(num_epochs):
     for i,(images,target) in enumerate(train_loader):
         images = Variable(images)
         target = Variable(target)
+        print(images.size())
+        continue
         if use_gpu:
             images,target = images.to(device),target.to(device)
 

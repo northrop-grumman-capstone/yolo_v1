@@ -73,7 +73,7 @@ model.to(device)
 
 # ### input pipeline
 train_dataset = VideoDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=1, num_workers=4, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=int(n_batch/8), num_workers=0, shuffle=True)
 
 
 
@@ -82,7 +82,7 @@ model.train()
 
 
 # ### set loss function and optimizer
-loss_fn = YoloLoss(1, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu)
+loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=use_gpu)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 save_folder = 'results/'
@@ -90,41 +90,34 @@ save_folder = 'results/'
 # ### training
 loss_list = []
 loss_record = []
+q = 0
 for epoch in range(num_epochs):
-    for i,(video,target) in enumerate(train_loader):
-        video = torch.squeeze(video)
-        target = torch.squeeze(target)
+    for i,(videos,target) in enumerate(train_loader):
+        videos = videos.reshape([videos.shape[0]*videos.shape[1], 3, 224, 224])
+        target = target.reshape([target.shape[0]*target.shape[1], 7, 7, 34])
 
-        videoSize = len(video)
-        for j in range(0, videoSize,n_batch):
-            if(j + n_batch < videoSize):
-                videoSubset = video[j:j+n_batch]
-                targetSubset = target[j:j+n_batch]
-            else:
-                videoSubset = video[j:videoSize]
-                targetSubset = target[j:videoSize]
 
-            videoSubset = Variable(videoSubset)
-            targetSubset = Variable(targetSubset)
-            if use_gpu:
-                videoSubset,targetSubset = videoSubset.to(device),targetSubset.to(device)
+        videos = Variable(videos)
+        target = Variable(target)
 
-            pred = model(videoSubset)
-            loss = loss_fn(pred,targetSubset)
-            current_loss = loss.data.cpu().numpy()
-            loss_list.append(current_loss)
+        if use_gpu:
+            videos,target = videos.to(device),target.to(device)
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        pred = model(videos)
+        loss = loss_fn(pred,target)
 
-            loss_record.append(current_loss)
-            torch.save(model.state_dict(),os.path.join(save_folder, model_name))
+        current_loss = loss.data.cpu().numpy()
+        loss_list.append(current_loss)
 
-        if i % 2 == 0:
-            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f"                              % (i, len(train_loader), epoch+1, num_epochs, current_loss))
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
+        if i % 20 == 0:
+            sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
-
+            torch.save(model.state_dict(),os.path.join(save_folder, model_name))
 
 
 # ### save the model parameters
