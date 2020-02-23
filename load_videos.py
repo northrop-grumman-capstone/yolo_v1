@@ -29,26 +29,32 @@ class VideoDataset(data.Dataset):
             infile = open(filename,'rb')
             videoAnnot = pickle.load(infile)
             infile.close()
-            bbox = []
-            label = []
-            fileNames = []
+            index = 0
+            
+            videoAnnot = self.interp(videoAnnot)
 
+            while index < len(videoAnnot):
+                bbox = []
+                label = []
+                fileNames = []
+                while len(bbox) <  8 and index < len(videoAnnot):
+                    value = videoAnnot[index]
+                    for j in range(len(value)):
+                        if(j!=0): break # original code only used one annotation, remove later if it works with more
+                        fileNames.append(file[:-7]+"/"+str(index)+".jpeg")
+                        label.append(torch.IntTensor([int(value[j][0])]))
+                        # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
+                        # this expected [xcenter, ycenter, height, width] in img coords right here
+                        # but I changed later code, so it expects it between 0 and 1
+                        #bbox.append(torch.Tensor([[(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
+                        bbox.append(torch.Tensor([[value[j][1][0], (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
+                    index += 1
 
-            for i,value in enumerate(videoAnnot):
-                for j in range(len(value)):
-                    if(j!=0): break # original code only used one annotation, remove later if it works with more
-                    fileNames.append(file[:-7]+"/"+str(i)+".jpeg")
-                    label.append(torch.IntTensor([int(value[j][0])]))
-                    # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
-                    # this expected [xcenter, ycenter, height, width] in img coords right here
-                    # but I changed later code, so it expects it between 0 and 1
-                    #bbox.append(torch.Tensor([[(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
-                    bbox.append(torch.Tensor([[value[j][1][0], (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
+                if(len(bbox) == 8):
+                    self.file_names.append(fileNames)
+                    self.bboxes.append(torch.stack(bbox))
+                    self.labels.append(torch.stack(label))
 
-            if(len(videoAnnot) != 0):
-                self.file_names.append(fileNames)
-                self.bboxes.append(torch.stack(bbox))
-                self.labels.append(torch.stack(label))
         self.n_data = len(self.labels)
 
 
@@ -108,6 +114,27 @@ class VideoDataset(data.Dataset):
         for i in range(n_bbox):
             target[int(x_index[i]),int(y_index[i])] = target_infoblock[i].clone()
         return target
+
+    def interp(self, annos):
+        l1 = -1
+        l2 = -1
+        for i in range(len(annos)):
+            if(len(annos[i])!=0):
+                if(l1==-1):
+                    l1 = i
+                else:
+                    if(l2!=-1): l1 = l2
+                    l2 = i
+            if(l2!=i or annos[l1][0][0]!=annos[l2][0][0] or l2-l1>5): continue
+            for j in range(l1+1, l2):
+                a = (annos[l1][0][0], [0,0,0,0])
+                f = (j-l1)/(l2-l1)
+                a[1][0] = f*annos[l2][0][1][0]+(1-f)*annos[l1][0][1][0]
+                a[1][1] = f*annos[l2][0][1][1]+(1-f)*annos[l1][0][1][1]
+                a[1][2] = f*annos[l2][0][1][2]+(1-f)*annos[l1][0][1][2]
+                a[1][3] = f*annos[l2][0][1][3]+(1-f)*annos[l1][0][1][3]
+                annos[j].append(a)
+        return annos
 
     def __len__(self):
         return self.n_data

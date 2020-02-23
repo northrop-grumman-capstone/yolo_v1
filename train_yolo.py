@@ -90,6 +90,7 @@ for epoch in range(num_epochs):
     for i,(images,target) in enumerate(train_loader):
         images = Variable(images)
         target = Variable(target)
+
         if use_gpu:
             images,target = images.to(device),target.to(device)
 
