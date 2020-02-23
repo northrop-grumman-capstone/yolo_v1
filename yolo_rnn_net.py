@@ -10,30 +10,13 @@ class Flatten(nn.Module):
 
         return x.view(nbatches, 8, -1) 
 
-
-class TimeDistributed(nn.Module):
-    def __init__(self, module, batch_first=False):
-        super(TimeDistributed, self).__init__()
-        self.module = module
-        self.batch_first = batch_first
-
+class Squeeze(nn.Module):
+    def __init__(self):
+        super(Flatten, self).__init__()
     def forward(self, x):
+        batch, seqLen, features = x.size()
 
-        if len(x.size()) <= 2:
-            return self.module(x)
-
-        # Squash samples and timesteps into a single axis
-        x_reshape = x.contiguous().view(-1, x.size(-1))  # (samples * timesteps, input_size)
-
-        y = self.module(x_reshape)
-
-        # We have to reshape Y
-        if self.batch_first:
-            y = y.contiguous().view(x.size(0), -1, y.size(-1))  # (samples, timesteps, output_size)
-        else:
-            y = y.view(-1, x.size(1), y.size(-1))  # (timesteps, samples, output_size)
-
-        return y
+        return x.view(batch*seqLen, features) 
 
 
 class YOLO_V1(nn.Module):
@@ -91,9 +74,8 @@ class YOLO_V1(nn.Module):
             nn.LeakyReLU(0.1)
         )
         self.flatten = Flatten()
-        self.rnn = nn.RNN(input_size=1024 , hidden_size=1024 , num_layers= 1) 
-        #self.rnn = nn.LSTM(input_size=1024 , hidden_size=1024 , num_layers= 1) 
-        #self.rnn = nn.GRU(input_size=1024 , hidden_size=1024 , num_layers= 1) 
+        self.squeeze = Squeeze()
+        self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1) 
         self.conn_layer1 = nn.Sequential(
             nn.Linear(in_features=7*7*1024, out_features=4096),
             nn.Dropout(),
@@ -117,9 +99,11 @@ class YOLO_V1(nn.Module):
 
         flatten = self.flatten(conv_layer6)
 
-        rnn = self.rnn(flatten)
+        r_out, h_n = self.rnn(flatten)
 
-        conn_layer1 = self.conn_layer1(rnn)
+        squeeze = self.squeeze(r_out)
+
+        conn_layer1 = self.conn_layer1(squeeze)
 
         output = self.conn_layer2(conn_layer1)
         
