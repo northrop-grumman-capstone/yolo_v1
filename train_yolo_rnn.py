@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from load_videos import *
 from YoloLoss import YoloLoss
-from network import *
+from yolo_rnn_net import *
 
 
 
