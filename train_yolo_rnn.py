@@ -88,9 +88,6 @@ loss_record = []
 q = 0
 for epoch in range(num_epochs):
     for i,(videos,target) in enumerate(train_loader):
-        videos = videos.reshape([videos.shape[0]*videos.shape[1], 3, 224, 224])
-        target = target.reshape([target.shape[0]*target.shape[1], 7, 7, 34])
-
 
         videos = Variable(videos)
         target = Variable(target)

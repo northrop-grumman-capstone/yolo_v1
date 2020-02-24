@@ -1,6 +1,14 @@
 import torch.nn as nn
 import torch
 
+
+class Combine(nn.Module):
+    def __init__(self):
+        super(Combine, self).__init__()
+    def forward(self, x):
+        batch, seqLen, channels, features1, features2 = x.size()
+        return x.view(batch*seqLen, channels, features1, features2) 
+
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
@@ -12,7 +20,7 @@ class Flatten(nn.Module):
 
 class Squeeze(nn.Module):
     def __init__(self):
-        super(Flatten, self).__init__()
+        super(Squeeze, self).__init__()
     def forward(self, x):
         batch, seqLen, features = x.size()
 
@@ -24,6 +32,7 @@ class YOLO_V1(nn.Module):
         super(YOLO_V1, self).__init__()
         C = 24  # number of classes
         print("\n------Initiating YOLO v1------\n")
+        self.combine = Combine()
         self.conv_layer1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=7//2),
             nn.BatchNorm2d(64),
@@ -75,7 +84,7 @@ class YOLO_V1(nn.Module):
         )
         self.flatten = Flatten()
         self.squeeze = Squeeze()
-        self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1) 
+        self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1, batchFirst=True) 
         self.conn_layer1 = nn.Sequential(
             nn.Linear(in_features=7*7*1024, out_features=4096),
             nn.Dropout(),
@@ -85,7 +94,9 @@ class YOLO_V1(nn.Module):
 
     def forward(self, input):
 
-        conv_layer1 = self.conv_layer1(input)
+        newInput = self.Combine(input)
+
+        conv_layer1 = self.conv_layer1(newInput)
 
         conv_layer2 = self.conv_layer2(conv_layer1)
 
