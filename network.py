@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+import numpy as np
 
 
 class Flatten(nn.Module):
@@ -92,3 +94,62 @@ class YOLO_V1(nn.Module):
         output = self.conn_layer2(conn_layer1)
         return output
 
+
+
+    def load_conv_bn(self, buf, start, conv_model, bn_model):
+        num_w = conv_model.weight.numel()
+        num_b = bn_model.bias.numel()
+        bn_model.bias.data.copy_(torch.from_numpy(buf[start:start+num_b]));     start = start + num_b
+        bn_model.weight.data.copy_(torch.from_numpy(buf[start:start+num_b]));   start = start + num_b
+        bn_model.running_mean.copy_(torch.from_numpy(buf[start:start+num_b]));  start = start + num_b
+        bn_model.running_var.copy_(torch.from_numpy(buf[start:start+num_b]));   start = start + num_b
+        #conv_model.weight.data.copy_(torch.from_numpy(buf[start:start+num_w])); start = start + num_w
+        conv_model.weight.data.copy_(torch.from_numpy(buf[start:start + num_w]).view_as(conv_model.weight.data)); start = start + num_w
+        return start
+
+    def load_conv(self, buf, start, conv_model):
+
+        num_w = conv_model.weight.numel()
+        num_b = conv_model.bias.numel()
+        #print("start: {}, num_w: {}, num_b: {}".format(start, num_w, num_b))
+        # by ysyun, use .view_as()
+        conv_model.bias.data.copy_(torch.from_numpy(buf[start:start+num_b]).view_as(conv_model.bias.data));   start = start + num_b
+        conv_model.weight.data.copy_(torch.from_numpy(buf[start:start+num_w]).view_as(conv_model.weight.data)); start = start + num_w
+        return start
+
+    def load_fc(self, buf, start, fc_model):
+        num_w = fc_model.weight.numel()
+        num_b = fc_model.bias.numel()
+        fc_model.bias.data.copy_(torch.from_numpy(buf[start:start+num_b]));     start = start + num_b
+        fc_model.weight.data.copy_(torch.from_numpy(buf[start:start+num_w]));   start = start + num_w 
+        return start
+
+    def load_weight(self,weight_file):
+        print("Load pretrained models !")
+
+        fp = open(weight_file, 'rb')
+        header = np.fromfile(fp, count=4, dtype=np.int32)
+        header = torch.from_numpy(header)
+        buf = np.fromfile(fp, dtype = np.float32)
+        
+        a = self.children()
+
+        start = 0
+        for idx,q in enumerate(a):
+            print(q)
+            for m in q.children():
+                if isinstance(m, nn.Conv2d):
+                    conv = m
+                    start = self.load_conv(buf, start, conv)
+                elif isinstance(m, nn.BatchNorm2d):
+                    start = self.load_conv_bn(buf, start, conv, m)
+                # elif isinstance(m, nn.Linear):
+                #     start = self.load_fc(buf, start, m)
+
+
+
+
+if __name__ == '__main__':
+    net = YOLO_V1()
+    #Download weights here: http://pjreddie.com/media/files/yolov1/yolov1.weights
+    net.load_weight ('../yolov1.weights')
