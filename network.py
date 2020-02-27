@@ -131,7 +131,7 @@ class YOLO_V1(nn.Module):
         header = np.fromfile(fp, count=4, dtype=np.int32)
         header = torch.from_numpy(header)
         buf = np.fromfile(fp, dtype = np.float32)
-        
+        fp.close()
         a = self.children()
 
         start = 0
