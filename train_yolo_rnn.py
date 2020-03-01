@@ -81,7 +81,7 @@ weight = [1/i if i > 0 else i  for i in class_sample_count]
 
 samples_weight = np.array([weight[t] for t in y_train])
 samples_weight = torch.from_numpy(samples_weight)
-sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight), replacement=True)
 
 
 train_loader = DataLoader(train_dataset, batch_size=int(n_batch/8), num_workers=0, sampler = sampler)
