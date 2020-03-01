@@ -55,7 +55,6 @@ class VideoDataset(data.Dataset):
                     self.bboxes.append(torch.stack(bbox))
                     self.labels.append(torch.stack(label))
 
-        self.n_data = len(self.labels)
 
 
     def __getitem__(self, index):

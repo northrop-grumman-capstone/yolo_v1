@@ -83,7 +83,7 @@ class YOLO_V1(nn.Module):
             nn.LeakyReLU(0.1)
         )
         self.flatten = Flatten()
-        self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1, batchFirst=True) 
+        self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1, batch_first=True) 
         self.squeeze = Squeeze()
         self.conn_layer1 = nn.Sequential(
             nn.Linear(in_features=7*7*1024, out_features=4096),

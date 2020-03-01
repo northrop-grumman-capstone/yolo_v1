@@ -6,6 +6,7 @@ import numpy as np
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
+from torch.utils.data import WeightedRandomSampler
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
@@ -70,7 +71,18 @@ model.to(device)
 
 # ### input pipeline
 train_dataset = FramesDataset(videoDir=videoDir, annotDir=annotDir, img_size=img_size, S=S, B=B, C=C, transforms=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=4, shuffle=True)
+
+y_train = np.array([i.data.tolist()[0] for i in train_dataset.labels])
+
+class_sample_count = np.array([len(np.where(y_train == t)[0]) for t in range(C)])
+weight = [1/i if i > 0 else i  for i in class_sample_count]
+
+samples_weight = np.array([weight[t] for t in y_train])
+samples_weight = torch.from_numpy(samples_weight)
+sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+
+
+train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=4, sampler=sampler)
 
 
 
@@ -109,7 +121,6 @@ for epoch in range(num_epochs):
             sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
             sys.stdout.flush()
             torch.save(model.state_dict(),os.path.join(save_folder, model_name))
-
 
 # ### save the model parameters
 save_folder = 'results/'
