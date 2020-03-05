@@ -40,7 +40,7 @@ learning_rate = 0.0006
 img_size = 224
 num_epochs = 150
 lambda_coord = 5
-lambda_noobj = .5
+lambda_noobj = .25
 #n_batch = 64
 n_batch = 32
 S = 7 # This is currently hardcoded into the YOLO model
@@ -55,7 +55,7 @@ print(model)
 print("untrained YOLO_V1 model has loaded! (mini version)")
 print("")
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 #if torch.cuda.device_count() > 1:
 #    print("Let's use", torch.cuda.device_count(), "GPUs!")

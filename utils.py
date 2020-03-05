@@ -17,7 +17,7 @@ def bbox_to_rect(bbox, width, height): #bbox is [xmin, xmax, ymin, ymax] as floa
 def rect_to_bbox(rect, width, height): #rect is (xmin, ymin, width, height) as ints in img coords
 	return [rect[0]/width, (rect[0]+rect[2])/width, rect[1]/height, (rect[1]+rect[3])/height]
 
-def iou(box1, box2): # boxes are [xmin, xmax, ymin, ymax]
+def iou(box1, box2): # boxes are np array [xmin, xmax, ymin, ymax]
 	wi = min(box1[1], box2[1])-max(box1[0], box2[0])
 	hi = min(box1[3], box2[3])-max(box1[2], box2[2])
 	if(wi<0 or hi<0): return 0
@@ -25,21 +25,22 @@ def iou(box1, box2): # boxes are [xmin, xmax, ymin, ymax]
 	union = (box1[1]-box1[0])*(box1[3]-box1[2])+(box2[1]-box2[0])*(box2[3]-box2[2])-inter
 	return inter/union
 
-def nonmaxsuppress(l, iou_thresh=0.3): # l = [(confidence, class, [xmin, xmax, ymin, ymax])]
-	l.sort(key=lambda x: x[0], reverse=True) # sort by confidence
+def nonmaxsuppress(l, iou_thresh, class_diff): # l = [(class, [xmin, xmax, ymin, ymax], confidence)]
+	l.sort(key=lambda x: x[2], reverse=True) # sort by confidence
 	boxes = []
 	for box1 in l:
 		a = True
 		for box2 in boxes:
-			if(iou(box1[2],box2[1])>iou_thresh):
+			if((not class_diff or box1[0]==box2[0]) and iou(box1[1],box2[1])>iou_thresh):
 				a = False
 				break
 		if(a):
-			boxes.append(box1[1:])
+			boxes.append(box1)
 	return boxes
 
-def yolo_to_bbox(yolout, thresh=0.25, S=7, B=2, C=24): # converts yolo output [batch, S*S*(B*5+C)] to [[(class, [xmin, xmax, ymin, ymax])]]
+def yolo_to_bbox(yolout, conf_thresh=0.25, iou_thresh=0.3, multiclass=False, classdiff=True, S=7, B=2, C=24): # converts yolo output [batch, S*S*(B*5+C)] to [[(class, [xmin, xmax, ymin, ymax])]]
 	if(len(yolout.size())==1): yolout.unsqueeze(0)
+	assert classdiff if multiclass else True, "Please don't use multiclass without classdiff."
 	batch_boxes = []
 	n_elements = B*5+C
 	for b in range(yolout.size()[0]):
@@ -49,16 +50,24 @@ def yolo_to_bbox(yolout, thresh=0.25, S=7, B=2, C=24): # converts yolo output [b
 				x = (S*i+j)*n_elements
 				box_data = yolout[b][x:x+B*5].tolist()
 				classes = yolout[b][x+B*5:x+n_elements]
-				pred_class = classes.argmax().item()
 				for box in range(B):
-					confidence = box_data[box*5+4] # this might need to be box_data[box*5+4]*classes[pred_class]
-					if(confidence<thresh): continue
-					xc = box_data[0] #(i+box_data[0])/S # use this if we ever fix it
-					yc = box_data[1] #(j+box_data[1])/S # use this if we ever fix it
+					if(multiclass):
+						pred_classes = ((box_data[box*5+4]*classes)>conf_thresh).nonzero().flatten().tolist()
+						if(len(pred_classes==0)): continue
+					else:
+						pred_classes = [classes.argmax().item()]
+						confidence = box_data[box*5+4]*classes[pred_classes[0]]
+						if(confidence<conf_thresh): continue
+					# xc and yc are offsets from grid, change back to box_data[0] and [1] if works poorly
+					xc = (i+box_data[0])/S
+					yc = (j+box_data[1])/S
 					w = box_data[2]**2
 					h = box_data[3]**2
-					boxes.append((confidence, pred_class, [xc-w/2, xc+w/2, yc-h/2, yc+h/2]))
-		boxes = nonmaxsuppress(boxes)
+					arr = np.array([xc-w/2, xc+w/2, yc-h/2, yc+h/2])
+					for pred_class in pred_classes:
+						confidence = box_data[box*5+4]*classes[pred_class]
+						boxes.append((pred_class, arr, confidence))
+		boxes = nonmaxsuppress(boxes, iou_thresh, classdiff)
 		batch_boxes.append(boxes)
 	print(batch_boxes)
 	return batch_boxes

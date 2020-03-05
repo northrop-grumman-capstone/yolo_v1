@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 class FramesDataset(data.Dataset):
-    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms):
+    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms, encode=True):
         self.videoDir = videoDir
         self.annotDir = annotDir
         self.file_names = []
@@ -22,7 +22,7 @@ class FramesDataset(data.Dataset):
         self.transforms = transforms
         self.bboxes = []
         self.labels = []
-
+        self.encode = encode
 
         for file in os.listdir(annotDir):
             filename = annotDir+file
@@ -54,13 +54,14 @@ class FramesDataset(data.Dataset):
 
         width, height = img.size
 
-        img = img.resize((self.img_size, self.img_size)) 
+        img = img.resize((self.img_size, self.img_size))
         # the following line resized bboxes to between 0 and 1, but ours are already like that
         #bbox = bbox / torch.Tensor([width, height, width, height])# * self.img_size
-        target = self.encode_target(bbox, label)
+        if(self.encode):
+            target = self.encode_target(bbox, label)
         transform = transforms.Compose(self.transforms)
         img = transform(img)
-        return img, target
+        return img, target if self.encode else (label, bbox)
 
     def encode_target(self, bbox, label):
         """
@@ -84,9 +85,12 @@ class FramesDataset(data.Dataset):
 
         x_index = torch.clamp((x_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
         y_index = torch.clamp((y_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
+        # bounding box centers are offsets from grid, not absolute, may remove if performs poorly
+        x_center = torch.clamp((x_center / (1 / float(self.S))), 0, self.S-1) - x_index
+        y_center = torch.clamp((y_center / (1 / float(self.S))), 0, self.S-1) - y_index
+
         c = torch.ones_like(x_center)
         # set w_sqrt and h_sqrt directly
-
 
         box_block = torch.cat((x_center.view(-1,1), y_center.view(-1,1), w_sqrt.view(-1,1), h_sqrt.view(-1,1), c.view(-1,1)), dim=1)
         box_info = box_block.repeat(1, self.B)
@@ -98,4 +102,3 @@ class FramesDataset(data.Dataset):
 
     def __len__(self):
         return self.n_data
-

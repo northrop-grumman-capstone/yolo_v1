@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 class VideoDataset(data.Dataset):
-    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms):
+    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms, encode=True, split_video=True):
         self.videoDir = videoDir
         self.annotDir = annotDir
         self.file_names = []
@@ -22,7 +22,8 @@ class VideoDataset(data.Dataset):
         self.transforms = transforms
         self.bboxes = []
         self.labels = []
-
+        self.encode = encode
+        self.split_video = split_video #TODO use this variable
 
         for file in os.listdir(annotDir):
             filename = annotDir+file
@@ -30,7 +31,7 @@ class VideoDataset(data.Dataset):
             videoAnnot = pickle.load(infile)
             infile.close()
             index = 0
-            
+
             videoAnnot = self.interp(videoAnnot)
 
             while index < len(videoAnnot):
@@ -68,17 +69,17 @@ class VideoDataset(data.Dataset):
             imagePath = os.path.join(self.videoDir, image)
             img = Image.open(imagePath)
             width, height = img.size
-            img = img.resize((self.img_size, self.img_size)) 
+            img = img.resize((self.img_size, self.img_size))
             img = transform(img)
             images.append(img)
         # the following line resized bboxes to between 0 and 1, but ours are already like that
         #bbox = bbox / torch.Tensor([width, height, width, height])# * self.img_size
         target = []
-
         for i in range(len(bbox)):
-            target.append(self.encode_target(bbox[i], label[i]))
+            if(self.encode): target.append(self.encode_target(bbox[i], label[i]))
+            else: target.append((label, bbox))
 
-        return torch.stack(images), torch.stack(target)
+        return torch.stack(images), torch.stack(target) if self.encode else target
 
     def encode_target(self, bbox, label):
         """
@@ -102,9 +103,12 @@ class VideoDataset(data.Dataset):
 
         x_index = torch.clamp((x_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
         y_index = torch.clamp((y_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
+        # bounding box centers are offsets from grid, not absolute, may remove if performs poorly
+        x_center = torch.clamp((x_center / (1 / float(self.S))), 0, self.S-1) - x_index
+        y_center = torch.clamp((y_center / (1 / float(self.S))), 0, self.S-1) - y_index
+
         c = torch.ones_like(x_center)
         # set w_sqrt and h_sqrt directly
-
 
         box_block = torch.cat((x_center.view(-1,1), y_center.view(-1,1), w_sqrt.view(-1,1), h_sqrt.view(-1,1), c.view(-1,1)), dim=1)
         box_info = box_block.repeat(1, self.B)
@@ -137,4 +141,3 @@ class VideoDataset(data.Dataset):
 
     def __len__(self):
         return self.n_data
-
