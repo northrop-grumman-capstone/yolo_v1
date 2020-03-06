@@ -7,7 +7,7 @@ class Combine(nn.Module):
         super(Combine, self).__init__()
     def forward(self, x):
         batch, seqLen, channels, features1, features2 = x.size()
-        return x.view(batch*seqLen, channels, features1, features2) 
+        return x.view(batch*seqLen, channels, features1, features2)
 
 class Flatten(nn.Module):
     def __init__(self):
@@ -16,7 +16,7 @@ class Flatten(nn.Module):
         batch, channels, s1, s2 = x.size()
         nbatches = int(batch/8)
 
-        return x.view(nbatches, 8, -1) 
+        return x.view(nbatches, 8, -1)
 
 class Squeeze(nn.Module):
     def __init__(self):
@@ -24,11 +24,11 @@ class Squeeze(nn.Module):
     def forward(self, x):
         batch, seqLen, features = x.size()
 
-        return x.view(batch*seqLen, features) 
+        return x.view(batch*seqLen, features)
 
 
 class YOLO_V1(nn.Module):
-    def __init__(self):
+    def __init__(self, rnn_type="RNN"):
         super(YOLO_V1, self).__init__()
         C = 24  # number of classes
         print("\n------Initiating YOLO v1------\n")
@@ -83,7 +83,10 @@ class YOLO_V1(nn.Module):
             nn.LeakyReLU(0.1)
         )
         self.flatten = Flatten()
-        self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1, batch_first=True) 
+        if(rnn_type=="RNN"):
+            self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1, batch_first=True)
+        elif(rnn_type=="LSTM"):
+            self.rnn = nn.LSTM(input_size=50176 , hidden_size=50176 , num_layers= 1, batch_first=True) 
         self.squeeze = Squeeze()
         self.conn_layer1 = nn.Sequential(
             nn.Linear(in_features=7*7*1024, out_features=4096),
@@ -117,9 +120,5 @@ class YOLO_V1(nn.Module):
         conn_layer1 = self.conn_layer1(squeeze)
 
         output = self.conn_layer2(conn_layer1)
-        
+
         return output
-
-
-
-

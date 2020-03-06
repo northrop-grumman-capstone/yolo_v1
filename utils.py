@@ -69,7 +69,7 @@ def yolo_to_bbox(yolout, conf_thresh=0.25, iou_thresh=0.3, multiclass=False, cla
 						boxes.append((pred_class, arr, confidence))
 		boxes = nonmaxsuppress(boxes, iou_thresh, classdiff)
 		batch_boxes.append(boxes)
-	print(batch_boxes)
+	#print(batch_boxes)
 	return batch_boxes
 
 def draw_bbox(img, xy1, xy2, color=(255,0,0), label="", t_color=(0,0,0), thickness=4, t_scale=1, t_thickness=2):
