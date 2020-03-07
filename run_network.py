@@ -49,17 +49,17 @@ def load_network(model_name, gpu, new): # gpu = 2 to use both, 0 and 1 for cuda:
 	else:
 		model = network.YOLO_V1()
 		model_type = "yolo"
+	device = torch.device("cuda:"+str(gpu) if torch.cuda.is_available() and gpu!=-1 else "cpu")
 	if(new):
 		model.train()
 	else:
 		state_dict = OrderedDict()
-		for k, v in torch.load(model_name).items(): #in case model was saved with nn.DataParallel
+		for k, v in torch.load(model_name, map_location=device).items(): #in case model was saved with nn.DataParallel
 			if(k.startswith("module.")): state_dict[k[7:]] = v
 			else: state_dict[k] = v
 		model.load_state_dict(state_dict)
 		print("Loaded trained model")
 		model.eval()
-	device = torch.device("cuda:"+str(gpu) if torch.cuda.is_available() and gpu!=-1 else "cpu")
 	if(torch.cuda.device_count() > 1 and gpu == 2):
 		print("Let's use", torch.cuda.device_count(), "GPUs!")
 		model = nn.DataParallel(model)
@@ -129,19 +129,22 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 	print("")
 	loss_list = []
 	for epoch in range(num_epochs): #TODO Should work for both normal and rnn, test it
+		avgloss = 0
 		for i,(data,target) in enumerate(train_loader):
 			data = Variable(data).to(device)
 			target = Variable(target).to(device)
 			pred = model(data)
 			loss = loss_fn(pred,target)
 			current_loss = loss.data.cpu().numpy()
+			avgloss += current_loss
 			loss_list.append(current_loss)
 			optimizer.zero_grad()
 			loss.backward()
 			optimizer.step()
 			if i % 50 == 0:
-				sys.stdout.write("\r%d/%d batches in %d/%d iteration, current error is %f" % (i, len(train_loader), epoch+1, num_epochs, current_loss))
+				sys.stdout.write("\r%d/%d batches in %d/%d iteration, average loss was %f" % (i, len(train_loader), epoch+1, num_epochs, avgloss/50))
 				sys.stdout.flush()
+				avgloss = 0
 				torch.save(model.state_dict(), model_file)
 				dd.io.save(loss_file, np.array(loss_list))
 	torch.save(model.state_dict(), model_file)
