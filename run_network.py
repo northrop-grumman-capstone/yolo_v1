@@ -162,7 +162,7 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 	multiclass = kwargs["multiclass"]
 	classdiff = kwargs["classdiff"]
 	results_file = kwargs["results_file"]
-	if(results_file==""):
+	if(results_file=="auto"):
 		results_file = os.path.join("results/", "result_"+model_type+".pickle")
 	if(model_type in ["rnn", "lstm"]):
 		dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], encode=False, split_video=False)
@@ -188,10 +188,10 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 				for box in target: total_true[box[0]] += 1
 				for bbox in bboxes:
 					m = (-1,0)
-					for i in range(len(target)):
-						if(used[i] or bbox[0]!=target[i][0]): continue
-						iou = utils.iou(bbox, target[i][1])
-						if(iou>m[1]): m = (i, iou)
+					for j in range(len(target)):
+						if(used[j] or bbox[0]!=target[j][0]): continue
+						iou = utils.iou(bbox[1], target[j][1][0])
+						if(iou>m[1]): m = (j, iou)
 					if(m[0]!=-1):
 						used[m[0]] = True
 						preds[bbox[0]].append((bbox[2], m[1]))
@@ -272,7 +272,7 @@ def main():
 		parents=[parent_parser, im_parent_parser, tm_parent_parser],
 		help="compute mAP and other metrics on a validation/test set",
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	metrics_parser.add_argument("-f", "--results_file", help="file to write out result pickle to")
+	metrics_parser.add_argument("-f", "--results_file", default="auto", help="file to write out result pickle to")
 
 	args = vars(parser.parse_args())
 	if(args["command"]==None):

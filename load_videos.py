@@ -104,8 +104,8 @@ class VideoDataset(data.Dataset):
         x_index = torch.clamp((x_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
         y_index = torch.clamp((y_center / (1 / float(self.S))).ceil()-1, 0, self.S-1)
         # bounding box centers are offsets from grid, not absolute, may remove if performs poorly
-        x_center = torch.clamp((x_center / (1 / float(self.S))), 0, self.S-1) - x_index
-        y_center = torch.clamp((y_center / (1 / float(self.S))), 0, self.S-1) - y_index
+        #x_center = torch.clamp((x_center / (1 / float(self.S))), 0, self.S-1) - x_index
+        #y_center = torch.clamp((y_center / (1 / float(self.S))), 0, self.S-1) - y_index
 
         c = torch.ones_like(x_center)
         # set w_sqrt and h_sqrt directly

@@ -59,8 +59,10 @@ def yolo_to_bbox(yolout, conf_thresh=0.25, iou_thresh=0.3, multiclass=False, cla
 						confidence = box_data[box*5+4]*classes[pred_classes[0]]
 						if(confidence<conf_thresh): continue
 					# xc and yc are offsets from grid, change back to box_data[0] and [1] if works poorly
-					xc = (i+box_data[0])/S
-					yc = (j+box_data[1])/S
+					#xc = (i+box_data[0])/S
+					#yc = (j+box_data[1])/S
+					xc = box_data[0]
+					yc = box_data[1]
 					w = box_data[2]**2
 					h = box_data[3]**2
 					arr = np.array([xc-w/2, xc+w/2, yc-h/2, yc+h/2])
