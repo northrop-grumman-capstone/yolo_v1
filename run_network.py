@@ -72,6 +72,7 @@ def run_interactive(vid_folder, anno_folder, **kwargs): #TODO add rnn support
 	conf_thresh = kwargs["conf_thresh"]
 	multiclass = kwargs["multiclass"]
 	classdiff = kwargs["classdiff"]
+	annotated = kwargs["annotated"]
 	while(True):
 		try:
 			v = input("Enter video number: ")
@@ -85,7 +86,10 @@ def run_interactive(vid_folder, anno_folder, **kwargs): #TODO add rnn support
 					imgs = torch.stack(frames[i:i+n_batch])
 					yolout = model(imgs)
 					bboxes += utils.yolo_to_bbox(yolout, conf_thresh=conf_thresh, iou_thresh=iou_thresh, multiclass=multiclass, classdiff=classdiff)
-			utils.play_formatted(os.path.join(vid_folder, v), 200, annotations=bboxes, class_labels=True)
+			if(annotated):
+				utils.play_formatted_multi(os.path.join(vid_folder, v), 200, annotations=[bboxes, anno], class_labels=True)
+			else:
+				utils.play_formatted(os.path.join(vid_folder, v), 200, annotations=bboxes, class_labels=True)
 		except KeyboardInterrupt:
 			break
 		#except: pass
@@ -204,8 +208,9 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 	ious = np.linspace(.5, .95, 10)
 	for i in range(24):
 		if(i==22): continue # Skip class None
+		if(len(preds[i])==0): continue
 		preds[i].sort(reverse=True)
-		arr = np.array(preds[i])
+		arr = np.array([b[1] for b in preds[i]])
 		class_results = {}
 		for iou in ious:
 			pos_so_far = np.cumsum(arr>iou)
@@ -215,12 +220,13 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 			AP = np.sum(precision[1:]*np.diff(recall))+precision[0]*recall[0]
 			iou_results = {}
 			iou_results["AP"] = AP
-			iou_results["Precision"] = precision[::int(precision.size)/200] # store interpolation for plotting
-			iou_results["Recall"] = recall[::int(recall.size)/200] # store interpolation for plotting
+			iou_results["Precision"] = precision[::int(precision.size/200)] # store interpolation for plotting
+			iou_results["Recall"] = recall[::int(recall.size/200)] # store interpolation for plotting
 			class_results["IOU "+str(iou)] = iou_results
 		class_results["mAP"] = sum([item[1]["AP"] for item in class_results.items()])/10
 		results[utils.classes[i]] = class_results
 	results["mAP"] = sum([item[1]["mAP"] for item in results.items()])/23
+	print(results)
 	with open(results_file, 'wb+') as f:
 		pickle.dump(results, f)
 
@@ -266,6 +272,7 @@ def main():
 		parents=[parent_parser, im_parent_parser],
 		help="run a model on training videos interactively",
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	interactive_parser.add_argument("-a", "--annotated", action="store_true", help="Also show annotated boxes")
 
 	# For any arguments required by metrics
 	metrics_parser = subparsers.add_parser("metrics",

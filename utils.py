@@ -53,7 +53,7 @@ def yolo_to_bbox(yolout, conf_thresh=0.25, iou_thresh=0.3, multiclass=False, cla
 				for box in range(B):
 					if(multiclass):
 						pred_classes = ((box_data[box*5+4]*classes)>conf_thresh).nonzero().flatten().tolist()
-						if(len(pred_classes==0)): continue
+						if(len(pred_classes)==0): continue
 					else:
 						pred_classes = [classes.argmax().item()]
 						confidence = box_data[box*5+4]*classes[pred_classes[0]]
@@ -144,6 +144,38 @@ def play_formatted(foldername, frame_time, title="video", annotations=None, clas
 						frame = draw_bbox(frame, xy1, xy2, label=classes[anno[0]])
 					else:
 						frame = draw_bbox(frame, xy1, xy2)
+			cv2.imshow(title, frame)
+			k = cv2.waitKey(frame_time)
+			if(k == 97): # go back one frame when 'a' is pressed
+				frame_num = frame_num-1 if frame_num>0 else 0
+			if(k == 120): # exit video when 'x' is pressed (forward otherwise)
+				break
+			else:
+				frame_num += 1
+		except: break
+	try: cv2.destroyWindow(title)
+	except: pass
+
+def play_formatted_multi(foldername, frame_time, title="video", annotations=None, class_labels=False, out_size=None):
+	frame_num = 0
+	colors = [(255,0,0), (0,255,0), (0,0,255), (128,0,128), (0,128,128), (128,128,0), (128,128,128)]
+	while(True):
+		try:
+			#frame = np.load("{}/{}.npy".format(foldername, frame_num))
+			frame = cv2.imread("{}/{}.jpeg".format(foldername, frame_num))
+			if(out_size!=None):
+				frame = cv2.resize(frame, out_size)
+			frame_height = frame.shape[0]
+			frame_width = frame.shape[1]
+			if(annotations != None and len(annotations[0])>frame_num): #TODO add annotation to frame
+				for i in range(len(annotations)):
+					for anno in annotations[i][int(frame_num)]:
+						xy1 = (int(anno[1][0]*frame_width), int(anno[1][2]*frame_height))
+						xy2 = (int(anno[1][1]*frame_width), int(anno[1][3]*frame_height))
+						if(class_labels):
+							frame = draw_bbox(frame, xy1, xy2, label=classes[anno[0]], color=colors[i])
+						else:
+							frame = draw_bbox(frame, xy1, xy2, color=colors[i])
 			cv2.imshow(title, frame)
 			k = cv2.waitKey(frame_time)
 			if(k == 97): # go back one frame when 'a' is pressed

@@ -44,11 +44,13 @@ class VideoDataset(data.Dataset):
                         if(j!=0): break # original code only used one annotation, remove later if it works with more
                         fileNames.append(file[:-7]+"/"+str(index)+".jpeg")
                         label.append(torch.IntTensor([int(value[j][0])]))
-                        # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
-                        # this expected [xcenter, ycenter, height, width] in img coords right here
-                        # but I changed later code, so it expects it between 0 and 1
-                        #bbox.append(torch.Tensor([[(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
-                        bbox.append(torch.Tensor([[value[j][1][0], (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
+                        if(self.encode):
+                            # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
+                            # this expected [xcenter, ycenter, height, width] in img coords right here
+                            # but I changed later code, so it expects it between 0 and 1
+                            bbox.append(torch.Tensor([[(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]]]))
+                        else:
+                            bbox.append(torch.Tensor([value[j][1]]))
                     index += 1
 
                 if(len(bbox) == 8):

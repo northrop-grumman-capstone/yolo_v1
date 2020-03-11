@@ -36,10 +36,13 @@ class FramesDataset(data.Dataset):
                     if(j!=0): break # original code only used one annotation, remove later if it works with more
                     self.file_names.append(file[:-7]+"/"+str(i)+".jpeg")
                     label.append(int(value[j][0]))
-                    # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
-                    # this expected [xcenter, ycenter, height, width] in img coords right here
-                    # but I changed later code, so it expects it between 0 and 1
-                    bbox.append([(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]])
+                    if(self.encode):
+                        # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
+                        # this expected [xcenter, ycenter, height, width] in img coords right here
+                        # but I changed later code, so it expects it between 0 and 1
+                        bbox.append([(value[j][1][0]+value[j][1][1])/2, (value[j][1][2]+value[j][1][3])/2, value[j][1][1]-value[j][1][0], value[j][1][3]-value[j][1][2]])
+                    else:
+                        bbox.append(value[j][1])
                 if(len(value)!=0):
                     self.bboxes.append(torch.Tensor(bbox))
                     self.labels.append(torch.IntTensor(label))
