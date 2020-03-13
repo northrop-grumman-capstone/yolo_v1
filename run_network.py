@@ -31,7 +31,7 @@ vid_format = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/d
 
 toTensor = torchvision.transforms.ToTensor()
 
-def load_network(model_name, gpu, new): # gpu = 2 to use both, 0 and 1 for cuda:0 and cuda:1, -1 for cpu
+def load_network(model_name, gpu, new, base_model=None): # gpu = 2 to use both, 0 and 1 for cuda:0 and cuda:1, -1 for cpu
 	global model, device, model_type
 	if("rnn" in model_name): # add additional when stuff is implemented
 		model = yolo_rnn_net.YOLO_V1()
@@ -49,8 +49,15 @@ def load_network(model_name, gpu, new): # gpu = 2 to use both, 0 and 1 for cuda:
 	else:
 		model = network.YOLO_V1()
 		model_type = "yolo"
-	device = torch.device("cuda:"+str(gpu) if torch.cuda.is_available() and gpu!=-1 else "cpu")
+	device = torch.device("cuda:"+str(0 if gpu==2 else gpu) if torch.cuda.is_available() and gpu!=-1 else "cpu")
 	if(new):
+		if(base_model!=None):
+			state_dict = model.state_dict() # need to keep parameters not in base model
+			for k, v in torch.load(base_model, map_location=device).items():
+				if(k.startswith("module.")): k = k[7:] # in case model was saved with nn.DataParallel
+				if(k in state_dict): state_dict[k] = v # only load parameters corresponding to new model
+			model.load_state_dict(state_dict)
+		print("Loaded trained model")
 		model.train()
 	else:
 		state_dict = OrderedDict()
@@ -259,6 +266,7 @@ def main():
 		parents=[parent_parser, tm_parent_parser],
 		help="train a model",
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	train_parser.add_argument("-b", "--base_model", default=None, help="model to load weights from")
 	train_parser.add_argument("-lr", "--learning_rate", type=float, default=0.0006, help="learning rate for model training")
 	train_parser.add_argument("-b1", "--beta1", type=float, default=0.9, help="beta1 for Adam optimizer")
 	train_parser.add_argument("-b2", "--beta2", type=float, default=-1, help="beta2 for Adam optimizer, -1 for auto")
@@ -291,7 +299,7 @@ def main():
 	if("beta2" in args and args["beta2"]==-1):
 		args["beta2"] = 1-(1-args["beta1"])**2
 
-	load_network(args["model"], args["gpu"], args["command"]=="train")
+	load_network(args["model"], args["gpu"], args["command"]=="train", args.get("base_model", None))
 	if(args["command"]=="interactive"):
 		run_interactive(vid_format.format(args["set"]), anno_format.format(args["set"]), **args)
 	elif(args["command"]=="train"):
