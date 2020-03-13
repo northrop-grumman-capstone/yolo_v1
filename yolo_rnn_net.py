@@ -31,7 +31,7 @@ class YOLO_V1(nn.Module):
     def __init__(self, rnn_type="RNN"):
         super(YOLO_V1, self).__init__()
         C = 24  # number of classes
-        print("\n------Initiating YOLO v1------\n")
+        print("\n------Initiating YOLO v1 with",rnn_type,"layers------\n")
         self.combine = Combine()
         self.conv_layer1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=7//2),
@@ -46,9 +46,10 @@ class YOLO_V1(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.conv_layer3 = nn.Sequential(
-            nn.Conv2d(in_channels=192, out_channels=128, kernel_size=1, stride=1, padding=1//2),
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=3//2),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=1, stride=1, padding=1//2),
+            #nn.Conv2d(in_channels=192, out_channels=128, kernel_size=1, stride=1, padding=1//2),
+            nn.Conv2d(in_channels=192, out_channels=256, kernel_size=1, stride=1, padding=1//2), #added
+            #nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=3//2),
+            #nn.Conv2d(in_channels=256, out_channels=256, kernel_size=1, stride=1, padding=1//2),
             nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3//2),
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.1),
@@ -57,10 +58,10 @@ class YOLO_V1(nn.Module):
         self.conv_layer4 = nn.Sequential(
             nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1, padding=1//2),
             nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3//2),
-            nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1, padding=1//2),
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3//2),
-            nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1, padding=1//2),
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3//2),
+            #nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1, padding=1//2),
+            #nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3//2),
+            #nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1, padding=1//2),
+            #nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=3//2),
             nn.Conv2d(in_channels=512, out_channels=512, kernel_size=1, stride=1, padding=1//2),
             nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
             nn.BatchNorm2d(1024),
@@ -69,16 +70,18 @@ class YOLO_V1(nn.Module):
         self.conv_layer5 = nn.Sequential(
             nn.Conv2d(in_channels=1024, out_channels=512, kernel_size=1, stride=1, padding=1//2),
             nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
-            nn.Conv2d(in_channels=1024, out_channels=512, kernel_size=1, stride=1, padding=1//2),
-            nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
+            #nn.Conv2d(in_channels=1024, out_channels=512, kernel_size=1, stride=1, padding=1//2),
+            #nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
             nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
             nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(0.1),
         )
         self.conv_layer6 = nn.Sequential(
-            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
-            nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
+            #nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
+            #nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=3//2),
+            nn.Conv2d(in_channels=1024, out_channels=512, kernel_size=3, stride=1, padding=3//2), # added
+            nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=3//2), # added
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(0.1)
         )
