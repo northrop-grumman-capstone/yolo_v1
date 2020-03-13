@@ -121,13 +121,12 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 		train_dataset = load_frames.FramesDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor])
 		y_train = np.array([i.data.tolist()[0] for i in train_dataset.labels])
 		if(n_batch==-1): n_batch = 32
-	# class_sample_count = np.array([len(np.where(y_train == t)[0]) for t in range(C)])
-	# weight = [1/i if i > 0 else i for i in class_sample_count]
-	# samples_weight = np.array([weight[t] for t in y_train])
-	# samples_weight = torch.from_numpy(samples_weight)
-	# sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight), replacement=True)
-	# train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=workers, sampler=sampler)
-	train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=workers, shuffle=True)
+	class_sample_count = np.array([len(np.where(y_train == t)[0]) for t in range(C)])
+	weight = [1/i if i > 0 else i for i in class_sample_count]
+	samples_weight = np.array([weight[t] for t in y_train])
+	samples_weight = torch.from_numpy(samples_weight)
+	sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight), replacement=True)
+	train_loader = DataLoader(train_dataset, batch_size=n_batch, num_workers=workers, sampler=sampler)
 	loss_fn = YoloLoss(n_batch, B, C, lambda_coord, lambda_noobj, use_gpu=(device!=torch.device("cpu")), device=device)
 	optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay, betas=(beta1, beta2))
 	timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -142,7 +141,7 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 		for i,(data,target) in enumerate(train_loader):
 			data = Variable(data).to(device)
 			target = Variable(target).to(device)
-	(data)
+			pred = model(data)
 			loss = loss_fn(pred,target)
 			current_loss = loss.data.cpu().numpy()
 			avgloss += current_loss
