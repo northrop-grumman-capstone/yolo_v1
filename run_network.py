@@ -29,6 +29,10 @@ model_type = "" #TODO actually use this variable
 anno_format = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/{}/annots/"
 vid_format = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/{}/videos/"
 
+# ### sample dataset
+# annotDir = "sample_data/train/annots/"
+# videoDir = "sample_data/train/videos/"
+
 toTensor = torchvision.transforms.ToTensor()
 
 def load_network(model_name, gpu, new, base_model=None): # gpu = 2 to use both, 0 and 1 for cuda:0 and cuda:1, -1 for cpu
@@ -119,7 +123,7 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 	if(model_type in ["rnn", "lstm"]):
 		train_dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor])
 		y_train = np.array([i.data.tolist()[0][0] for i in train_dataset.labels])
-		if(n_batch==-1): n_batch = 4
+		if(n_batch==-1): n_batch = 3
 	else:
 		train_dataset = load_frames.FramesDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor])
 		y_train = np.array([i.data.tolist()[0] for i in train_dataset.labels])
