@@ -95,24 +95,3 @@ class YOLO_V1(nn.Module):
         output = self.conn_layer2(conn_layer1)
         return output
 
-
-'''
-def test():
-    from own_yolo_v1.load_dataset import *
-    from torch.autograd import Variable
-    img_folder = '../codedata/voc2012train/JPEGImages'
-    file = '../voc2012.txt'
-    img_size = 448
-    train_dataset = YoloDataset(img_folder=img_folder, file=file, img_size=img_size, transforms=[transforms.ToTensor()])
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=False, num_workers=0)
-    train_iter = iter(train_loader)
-    img, target = next(train_iter)
-    img = Variable(img)
-    net = YOLO_V1()
-    output = net(img)
-    print(output.size())
-
-
-if __name__ == '__main__':
-    test()
-'''

@@ -100,7 +100,7 @@ class YOLO_V1(nn.Module):
 
     def forward(self, input):
 
-        newInput = self.Combine(input)
+        newInput = self.combine(input)
 
         conv_layer1 = self.conv_layer1(newInput)
 
