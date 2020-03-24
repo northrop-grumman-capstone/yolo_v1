@@ -7,24 +7,28 @@ class Combine(nn.Module):
         super(Combine, self).__init__()
     def forward(self, x):
         batch, seqLen, channels, features1, features2 = x.size()
-        return x.view(batch*seqLen, channels, features1, features2)
+        return x.view(batch*seqLen, channels, features1, features2), seqLen
 
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
     def forward(self, x):
-        batch, channels, s1, s2 = x.size()
-        nbatches = int(batch/8)
+        shape = x.size()
+        return x.view(shape[0], -1)
 
-        return x.view(nbatches, 8, -1)
+class Flatten2(nn.Module):
+    def __init__(self):
+        super(Flatten2, self).__init__()
+    def forward(self, x):
+        shape = x.size()
+        return x.contiguous().view(shape[0]*shape[1], -1)
 
 class Squeeze(nn.Module):
     def __init__(self):
         super(Squeeze, self).__init__()
-    def forward(self, x):
-        batch, seqLen, features = x.size()
-
-        return x.view(batch*seqLen, features)
+    def forward(self, x, seqLen):
+        batch, features = x.size()
+        return x.view(int(batch/seqLen), seqLen, features)
 
 
 class YOLO_V1(nn.Module):
@@ -86,21 +90,23 @@ class YOLO_V1(nn.Module):
             nn.LeakyReLU(0.1)
         )
         self.flatten = Flatten()
-        if(rnn_type=="RNN"):
-            self.rnn = nn.RNN(input_size=50176 , hidden_size=50176 , num_layers= 1, batch_first=True)
-        elif(rnn_type=="LSTM"):
-            self.rnn = nn.LSTM(input_size=50176 , hidden_size=50176 , num_layers= 1, batch_first=True) 
-        self.squeeze = Squeeze()
         self.conn_layer1 = nn.Sequential(
             nn.Linear(in_features=7*7*1024, out_features=4096),
             nn.Dropout(),
             nn.LeakyReLU(0.1)
         )
+        self.squeeze = Squeeze()
+        if(rnn_type=="RNN"):
+            self.rnn = nn.RNN(input_size=4096 , hidden_size=4096 , num_layers= 1, batch_first=True, nonlinearity="relu")
+        elif(rnn_type=="LSTM"):
+            self.rnn = nn.LSTM(input_size=4096 , hidden_size=4096 , num_layers= 1, batch_first=True)
+        self.flatten2 = Flatten2()
         self.conn_layer2 = nn.Sequential(nn.Linear(in_features=4096, out_features=7 * 7 * (2 * 5 + C)))
+        self.squeeze2 = Squeeze()
 
-    def forward(self, input):
+    def forward(self, input, h_prev=None, same_shape=False):
 
-        newInput = self.Combine(input)
+        newInput, seqLen = self.combine(input)
 
         conv_layer1 = self.conv_layer1(newInput)
 
@@ -116,12 +122,20 @@ class YOLO_V1(nn.Module):
 
         flatten = self.flatten(conv_layer6)
 
-        r_out, h_n = self.rnn(flatten)
+        conn_layer1 = self.conn_layer1(flatten)
 
-        squeeze = self.squeeze(r_out)
+        squeeze = self.squeeze(conn_layer1, seqLen)
 
-        conn_layer1 = self.conn_layer1(squeeze)
+        if(h_prev==None):
+            r_out, h_n = self.rnn(squeeze)
+        else:
+            r_out, h_n = self.rnn(squeeze, h_prev)
 
-        output = self.conn_layer2(conn_layer1)
+        flatten2 = self.flatten2(r_out)
 
-        return output
+        output = self.conn_layer2(flatten2)
+
+        if(same_shape):
+            return self.squeeze2(output, seqLen), h_n
+        else:
+            return output, h_n

@@ -79,7 +79,7 @@ class VideoDataset(data.Dataset):
         target = []
         for i in range(len(bbox)):
             if(self.encode): target.append(self.encode_target(bbox[i], label[i]))
-            else: target.append((label, bbox))
+            else: target.append((label[i], bbox[i]))
 
         return torch.stack(images), torch.stack(target) if self.encode else target
 

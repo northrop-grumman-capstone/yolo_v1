@@ -30,8 +30,8 @@ anno_format = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/
 vid_format = "/media/trocket/27276136-d5a4-4943-825f-7416775dc262/home/trocket/data/{}/videos/"
 
 # ### sample dataset
-# annotDir = "sample_data/train/annots/"
-# videoDir = "sample_data/train/videos/"
+#anno_format = "sample_data/{}/annots/"
+#vid_format = "sample_data/{}/videos/"
 
 toTensor = torchvision.transforms.ToTensor()
 
@@ -121,10 +121,12 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 	B = 2 # This is currently hardcoded into the YOLO model
 	C = 24 # This is currently hardcoded into the YOLO model
 	if(model_type in ["rnn", "lstm"]):
+		recurrent = True
 		train_dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor])
 		y_train = np.array([i.data.tolist()[0][0] for i in train_dataset.labels])
 		if(n_batch==-1): n_batch = 3
 	else:
+		recurrent = False
 		train_dataset = load_frames.FramesDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor])
 		y_train = np.array([i.data.tolist()[0] for i in train_dataset.labels])
 		if(n_batch==-1): n_batch = 32
@@ -148,7 +150,10 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 		for i,(data,target) in enumerate(train_loader):
 			data = Variable(data).to(device)
 			target = Variable(target).to(device)
-			pred = model(data)
+			if(recurrent):
+				pred, h = model(data)
+			else:
+				pred = model(data)
 			loss = loss_fn(pred,target)
 			current_loss = loss.data.cpu().numpy()
 			avgloss += current_loss
