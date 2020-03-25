@@ -126,7 +126,7 @@ class YOLO_V1(nn.Module):
 
         squeeze = self.squeeze(conn_layer1, seqLen)
 
-        if(h_prev==None):
+        if(h_prev is None):
             r_out, h_n = self.rnn(squeeze)
         else:
             r_out, h_n = self.rnn(squeeze, h_prev)

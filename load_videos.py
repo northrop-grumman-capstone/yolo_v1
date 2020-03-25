@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 class VideoDataset(data.Dataset):
-    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms, encode=True, split_video=True):
+    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms, training=True):
         self.videoDir = videoDir
         self.annotDir = annotDir
         self.file_names = []
@@ -22,8 +22,7 @@ class VideoDataset(data.Dataset):
         self.transforms = transforms
         self.bboxes = []
         self.labels = []
-        self.encode = encode
-        self.split_video = split_video #TODO use this variable
+        self.training = training
 
         for file in os.listdir(annotDir):
             filename = annotDir+file
@@ -32,19 +31,23 @@ class VideoDataset(data.Dataset):
             infile.close()
             index = 0
 
-            videoAnnot = self.interp(videoAnnot)
+            if(self.training): videoAnnot = self.interp(videoAnnot)
+            else:
+                for i in range(len(videoAnnot)):
+                    if(len(videoAnnot[i])==0):
+                        videoAnnot[i] = [(-1, [-1, -1, -1, -1])]
 
             while index < len(videoAnnot):
                 bbox = []
                 label = []
                 fileNames = []
-                while len(bbox) <  8 and index < len(videoAnnot):
+                while (len(bbox) < 8 or not self.training) and index < len(videoAnnot):
                     value = videoAnnot[index]
                     for j in range(len(value)):
                         if(j!=0): break # original code only used one annotation, remove later if it works with more
                         fileNames.append(file[:-7]+"/"+str(index)+".jpeg")
                         label.append(torch.IntTensor([int(value[j][0])]))
-                        if(self.encode):
+                        if(self.training):
                             # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
                             # this expected [xcenter, ycenter, height, width] in img coords right here
                             # but I changed later code, so it expects it between 0 and 1
@@ -53,7 +56,7 @@ class VideoDataset(data.Dataset):
                             bbox.append(torch.Tensor([value[j][1]]))
                     index += 1
 
-                if(len(bbox) == 8):
+                if((self.training and len(bbox) == 8) or not self.training):
                     self.file_names.append(fileNames)
                     self.bboxes.append(torch.stack(bbox))
                     self.labels.append(torch.stack(label))
@@ -78,10 +81,10 @@ class VideoDataset(data.Dataset):
         #bbox = bbox / torch.Tensor([width, height, width, height])# * self.img_size
         target = []
         for i in range(len(bbox)):
-            if(self.encode): target.append(self.encode_target(bbox[i], label[i]))
+            if(self.training): target.append(self.encode_target(bbox[i], label[i]))
             else: target.append((label[i], bbox[i]))
 
-        return torch.stack(images), torch.stack(target) if self.encode else target
+        return torch.stack(images), torch.stack(target) if self.training else target
 
     def encode_target(self, bbox, label):
         """
@@ -142,4 +145,4 @@ class VideoDataset(data.Dataset):
         return annos
 
     def __len__(self):
-        return self.n_data
+        return len(self.file_names)

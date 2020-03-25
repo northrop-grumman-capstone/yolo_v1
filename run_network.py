@@ -3,6 +3,7 @@
 import os
 import sys
 import numpy as np
+import math
 import pickle
 import argparse
 import datetime
@@ -185,10 +186,14 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 	if(results_file=="auto"):
 		results_file = os.path.join("results/", "result_"+model_type+".pickle")
 	if(model_type in ["rnn", "lstm"]):
-		dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], encode=False, split_video=False)
-		if(n_batch==-1): n_batch = 1
+		recurrent = True
+		dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], training=False)
+		if(n_batch==-1): n_frames = 64
+		else: n_frames = n_batch
+		n_batch = 1
 	else:
-		dataset = load_frames.FramesDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], encode=False)
+		recurrent = False
+		dataset = load_frames.FramesDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], training=False)
 		if(n_batch==-1): n_batch = 64
 	loader = DataLoader(dataset, batch_size=n_batch, num_workers=workers)
 	preds = [[] for x in range(24)] # [[(confidence, iou)]]
@@ -197,28 +202,37 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 		#TODO torch turns batch_target into a weird list of 2 tensors, fix if you want to use multiple bounding boxes
 		# the rest of the validation code supports multiple bboxes
 		data = data.to(device)
-		if(model_type in ["rnn", "lstm"]): pass #TODO
-		else:
-			with torch.no_grad():
+		with torch.no_grad():
+			if(recurrent):
+				batch_boxes = []
+				h = None
+				for j in range(math.ceil(data.shape[1]/n_frames)):
+					pred, h = model(data[:, j*n_frames:(j+1)*n_frames, :, :, :], h)
+					batch_boxes += utils.yolo_to_bbox(pred, conf_thresh=conf_thresh, iou_thresh=iou_thresh, multiclass=multiclass, classdiff=classdiff)
+			else:
 				batch_boxes = utils.yolo_to_bbox(model(data), conf_thresh=conf_thresh, iou_thresh=iou_thresh, multiclass=multiclass, classdiff=classdiff)
-			for b in range(len(batch_boxes)):
+		for b in range(len(batch_boxes)):
+			if(recurrent):
+				target = [(batch_target[b][0][0].item(), batch_target[b][1][0].tolist())]
+				if(target[0][0]==-1): continue
+			else:
 				target = [(batch_target[0][b], batch_target[1][b,:].tolist())]
-				bboxes = batch_boxes[b]
-				used = [False]*len(target)
-				for box in target: total_true[box[0]] += 1
-				for bbox in bboxes:
-					m = (-1,0)
-					for j in range(len(target)):
-						if(used[j] or bbox[0]!=target[j][0]): continue
-						iou = utils.iou(bbox[1], target[j][1][0])
-						if(iou>m[1]): m = (j, iou)
-					if(m[0]!=-1):
-						used[m[0]] = True
-						preds[bbox[0]].append((bbox[2], m[1]))
-					else: preds[bbox[0]].append((bbox[2], 0))
-			if(i%20==0):
-				sys.stdout.write("\rCompleted {}/{} batches".format(i, len(loader)))
-				sys.stdout.flush()
+			bboxes = batch_boxes[b]
+			used = [False]*len(target)
+			for box in target: total_true[box[0]] += 1
+			for bbox in bboxes:
+				m = (-1,0)
+				for j in range(len(target)):
+					if(used[j] or bbox[0]!=target[j][0]): continue
+					iou = utils.iou(bbox[1], target[j][1][0])
+					if(iou>m[1]): m = (j, iou)
+				if(m[0]!=-1):
+					used[m[0]] = True
+					preds[bbox[0]].append((bbox[2], m[1]))
+				else: preds[bbox[0]].append((bbox[2], 0))
+		if(i%20==0):
+			sys.stdout.write("\rCompleted {}/{} batches".format(i, len(loader)))
+			sys.stdout.flush()
 	print("\nCompleted all inputs, calculating metrics...\n")
 	results = {}
 	ious = np.linspace(.5, .95, 10)

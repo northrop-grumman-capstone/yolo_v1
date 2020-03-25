@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 class FramesDataset(data.Dataset):
-    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms, encode=True):
+    def __init__(self, videoDir, annotDir, img_size, S, B, C, transforms, training=True):
         self.videoDir = videoDir
         self.annotDir = annotDir
         self.file_names = []
@@ -22,7 +22,7 @@ class FramesDataset(data.Dataset):
         self.transforms = transforms
         self.bboxes = []
         self.labels = []
-        self.encode = encode
+        self.training = training
 
         for file in os.listdir(annotDir):
             filename = annotDir+file
@@ -36,7 +36,7 @@ class FramesDataset(data.Dataset):
                     if(j!=0): break # original code only used one annotation, remove later if it works with more
                     self.file_names.append(file[:-7]+"/"+str(i)+".jpeg")
                     label.append(int(value[j][0]))
-                    if(self.encode):
+                    if(self.training):
                         # pickle files have [xmin, xmax, ymin, ymax] between 0 and 1
                         # this expected [xcenter, ycenter, height, width] in img coords right here
                         # but I changed later code, so it expects it between 0 and 1
@@ -60,11 +60,11 @@ class FramesDataset(data.Dataset):
         img = img.resize((self.img_size, self.img_size))
         # the following line resized bboxes to between 0 and 1, but ours are already like that
         #bbox = bbox / torch.Tensor([width, height, width, height])# * self.img_size
-        if(self.encode):
+        if(self.training):
             target = self.encode_target(bbox, label)
         transform = transforms.Compose(self.transforms)
         img = transform(img)
-        return img, target if self.encode else (label, bbox)
+        return img, target if self.training else (label, bbox)
 
     def encode_target(self, bbox, label):
         """
