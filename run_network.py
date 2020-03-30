@@ -23,6 +23,8 @@ from collections import OrderedDict
 from PIL import Image
 from YoloLoss import YoloLoss
 
+torch.multiprocessing.set_sharing_strategy("file_system") # prevents "0 items of ancdata" error
+
 model = None
 device = None
 model_type = "" #TODO actually use this variable
@@ -250,8 +252,8 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 			AP = np.sum(precision[1:]*np.diff(recall))+precision[0]*recall[0]
 			iou_results = {}
 			iou_results["AP"] = AP
-			iou_results["Precision"] = precision[::int(precision.size/200)] # store interpolation for plotting
-			iou_results["Recall"] = recall[::int(recall.size/200)] # store interpolation for plotting
+			iou_results["Precision"] = precision[::int(precision.size/200)] if precision.size>200 else precision # store interpolation for plotting
+			iou_results["Recall"] = recall[::int(recall.size/200)] if recall.size>200 else recall # store interpolation for plotting
 			class_results["IOU "+str(iou)] = iou_results
 		class_results["mAP"] = sum([item[1]["AP"] for item in class_results.items()])/10
 		results[utils.classes[i]] = class_results
