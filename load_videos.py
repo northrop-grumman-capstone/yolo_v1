@@ -31,7 +31,7 @@ class VideoDataset(data.Dataset):
             infile.close()
             index = 0
 
-            if(self.training): videoAnnot = self.interp(videoAnnot)
+            if(self.training): pass #videoAnnot = self.interp(videoAnnot)
             else:
                 for i in range(len(videoAnnot)):
                     if(len(videoAnnot[i])==0):

@@ -46,6 +46,9 @@ def load_network(model_name, gpu, new, base_model=None): # gpu = 2 to use both, 
 	elif("lstm" in model_name):
 		model = yolo_rnn_net.YOLO_V1(rnn_type="LSTM")
 		model_type = "lstm"
+	elif("tcnn" in model_name):
+		model = yolo_rnn_net.YOLO_V1(rnn_type="TCNN")
+		model_type= "tcnn"
 	elif("mini" in model_name):
 		model = mini.YOLO_V1()
 		model_type = "mini"
@@ -60,7 +63,7 @@ def load_network(model_name, gpu, new, base_model=None): # gpu = 2 to use both, 
 	if(new):
 		if(base_model!=None):
 			state_dict = model.state_dict() # need to keep parameters not in base model
-			for k, v in torch.load(base_model, map_location=device).items():
+			for k, v in torch.load(base_model, map_location="cpu").items():
 				if(k.startswith("module.")): k = k[7:] # in case model was saved with nn.DataParallel
 				if(k in state_dict): state_dict[k] = v # only load parameters corresponding to new model
 			model.load_state_dict(state_dict)
@@ -68,7 +71,7 @@ def load_network(model_name, gpu, new, base_model=None): # gpu = 2 to use both, 
 		model.train()
 	else:
 		state_dict = OrderedDict()
-		for k, v in torch.load(model_name, map_location=device).items(): #in case model was saved with nn.DataParallel
+		for k, v in torch.load(model_name, map_location="cpu").items(): #in case model was saved with nn.DataParallel
 			if(k.startswith("module.")): state_dict[k[7:]] = v
 			else: state_dict[k] = v
 		model.load_state_dict(state_dict)
@@ -87,6 +90,7 @@ def run_interactive(vid_folder, anno_folder, **kwargs): #TODO add rnn support
 	multiclass = kwargs["multiclass"]
 	classdiff = kwargs["classdiff"]
 	annotated = kwargs["annotated"]
+	recurrent = model_type in ["rnn", "lstm", "tcnn"]
 	while(True):
 		try:
 			v = input("Enter video number: ")
@@ -95,11 +99,17 @@ def run_interactive(vid_folder, anno_folder, **kwargs): #TODO add rnn support
 			bboxes = []
 			for i in range(len(anno)):
 				frames[i] = toTensor(Image.open(os.path.join(vid_folder, "{}/{}.jpeg".format(v, i))).resize((224,224))).to(device)
+			if(recurrent): hidden = None
 			with(torch.no_grad()):
 				for i in range(0, len(anno), n_batch):
-					imgs = torch.stack(frames[i:i+n_batch])
-					yolout = model(imgs)
-					bboxes += utils.yolo_to_bbox(yolout, conf_thresh=conf_thresh, iou_thresh=iou_thresh, multiclass=multiclass, classdiff=classdiff)
+					if(recurrent):
+						imgs = torch.stack(frames[i:i+n_batch]).unsqueeze(0)
+						yolout, hidden = model(imgs, h_prev=hidden, same_shape=True)
+						bboxes += utils.yolo_to_bbox(yolout[0], conf_thresh=conf_thresh, iou_thresh=iou_thresh, multiclass=multiclass, classdiff=classdiff)
+					else:
+						imgs = torch.stack(frames[i:i+n_batch])
+						yolout = model(imgs)
+						bboxes += utils.yolo_to_bbox(yolout, conf_thresh=conf_thresh, iou_thresh=iou_thresh, multiclass=multiclass, classdiff=classdiff)
 			if(annotated):
 				utils.play_formatted_multi(os.path.join(vid_folder, v), 200, annotations=[bboxes, anno], class_labels=True)
 			else:
@@ -123,7 +133,7 @@ def train(vid_folder, anno_folder, **kwargs): #TODO
 	S = 7 # This is currently hardcoded into the YOLO model
 	B = 2 # This is currently hardcoded into the YOLO model
 	C = 24 # This is currently hardcoded into the YOLO model
-	if(model_type in ["rnn", "lstm"]):
+	if(model_type in ["rnn", "lstm", "tcnn"]):
 		recurrent = True
 		train_dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor])
 		y_train = np.array([i.data.tolist()[0][0] for i in train_dataset.labels])
@@ -187,16 +197,16 @@ def validate(vid_folder, anno_folder, **kwargs): #TODO test
 	results_file = kwargs["results_file"]
 	if(results_file=="auto"):
 		results_file = os.path.join("results/", "result_"+model_type+".pickle")
-	if(model_type in ["rnn", "lstm"]):
+	if(model_type in ["rnn", "lstm", "tcnn"]):
 		recurrent = True
 		dataset = load_videos.VideoDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], training=False)
-		if(n_batch==-1): n_frames = 64
+		if(n_batch==-1): n_frames = 32
 		else: n_frames = n_batch
 		n_batch = 1
 	else:
 		recurrent = False
 		dataset = load_frames.FramesDataset(vid_folder, anno_folder, 224, 7, 2, 24, [toTensor], training=False)
-		if(n_batch==-1): n_batch = 64
+		if(n_batch==-1): n_batch = 32
 	loader = DataLoader(dataset, batch_size=n_batch, num_workers=workers)
 	preds = [[] for x in range(24)] # [[(confidence, iou)]]
 	total_true = [0 for x in range(24)]
